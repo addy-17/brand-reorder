@@ -5,6 +5,8 @@ import json
 import os
 import base64
 import hashlib
+import urllib.request
+import urllib.error
 
 # ===== PAGE CONFIG =====
 st.set_page_config(page_title="Planning Calendar", page_icon="📅", layout="wide", initial_sidebar_state="collapsed")
@@ -22,54 +24,160 @@ st.markdown("""
     .stButton>button { background: linear-gradient(135deg, #8b5cf6, #7c3aed) !important; color: white !important; border: none !important; border-radius: 10px !important; font-weight: 600 !important; transition: all 0.25s ease !important; }
     .stButton>button:hover { transform: translateY(-2px) !important; box-shadow: 0 6px 25px rgba(139,92,246,0.3) !important; }
     .stButton>button[kind="secondary"] { background: rgba(255,255,255,0.05) !important; border: 1px solid rgba(255,255,255,0.08) !important; color: #94a3b8 !important; }
-    .st-emotion-cache-1kyxreq { display: flex; justify-content: center; }
     h1, h2, h3 { color: #f1f5f9 !important; }
-    
-    .event-card {
-        background: rgba(255,255,255,0.04); border-radius: 10px; padding: 14px; margin-bottom: 10px;
-        border-left: 3px solid #8b5cf6; transition: all 0.25s ease;
-    }
+    .event-card { background: rgba(255,255,255,0.04); border-radius: 10px; padding: 14px; margin-bottom: 10px; border-left: 3px solid #8b5cf6; transition: all 0.25s ease; }
     .event-card:hover { background: rgba(255,255,255,0.07); }
     .ev-brand { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px; }
     .brand-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
     .ev-task { font-size: 13px; color: #94a3b8; margin: 4px 0; }
     .ev-meta { display: flex; gap: 8px; font-size: 11px; color: #64748b; flex-wrap: wrap; }
     .status-badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
-    
     .month-title { font-size: 24px; font-weight: 700; text-align: center; padding: 10px 0; }
-    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
     .cal-header { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 4px; }
     .cal-header div { text-align: center; font-weight: 600; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; padding: 6px 0; }
     .stats-bar { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 12px 20px; font-size: 12px; color: #64748b; margin-top: 16px; }
-    .event-img { max-width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); margin: 8px 0; }
     hr { border-color: rgba(255,255,255,0.08) !important; margin: 16px 0 !important; }
-    .day-cell { text-align: center; padding: 8px 4px; border-radius: 8px; cursor: pointer; min-height: 60px; position: relative; background: rgba(255,255,255,0.03); transition: background 0.2s; }
-    .day-cell:hover { background: rgba(255,255,255,0.06); }
-    .day-cell.today { background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.3); }
-    .day-cell.selected { background: rgba(139,92,246,0.18); border: 2px solid #8b5cf6; }
-    .day-cell.other { opacity: 0.2; }
-    .day-num { font-size: 14px; font-weight: 600; color: #94a3b8; }
-    .day-cell.today .day-num { color: #8b5cf6; }
-    .day-cell.selected .day-num { color: #fff; }
-    .ev-chip { font-size: 7px; padding: 1px 4px; border-radius: 2px; color: white; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .nav-btn { background: rgba(255,255,255,0.05) !important; border: 1px solid rgba(255,255,255,0.08) !important; color: #94a3b8 !important; border-radius: 50% !important; width: 40px !important; height: 40px !important; padding: 0 !important; display: flex; align-items: center; justify-content: center; font-size: 18px !important; }
 </style>
 """, unsafe_allow_html=True)
 
+# ===== SUPABASE CONFIG (from secrets or env) =====
+SUPABASE_URL = st.secrets.get("SUPABASE_URL", os.environ.get("SUPABASE_URL", ""))
+SUPABASE_KEY = st.secrets.get("SUPABASE_KEY", os.environ.get("SUPABASE_KEY", ""))
+SUPABASE_BUCKET = "events"
+
+# ===== DATA LAYER =====
 DATA_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'calendar_data.json')
 
+def supabase_request(method, endpoint, data=None):
+    """Make REST API call to Supabase"""
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        return None
+    url = f"{SUPABASE_URL}/rest/v1/{endpoint}"
+    headers = {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+    }
+    try:
+        if method == "GET":
+            req = urllib.request.Request(url, headers=headers, method="GET")
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                return json.loads(resp.read().decode())
+        elif method == "POST":
+            data_bytes = json.dumps(data).encode()
+            req = urllib.request.Request(url, data=data_bytes, headers=headers, method="POST")
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                return json.loads(resp.read().decode()) if resp.read() else {"success": True}
+        elif method == "DELETE":
+            req = urllib.request.Request(url, headers=headers, method="DELETE")
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                return {"success": True}
+        elif method == "PATCH":
+            data_bytes = json.dumps(data).encode()
+            req = urllib.request.Request(url, data=data_bytes, headers=headers, method="PATCH")
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                return {"success": True}
+    except urllib.error.HTTPError as e:
+        if e.code == 406:
+            return []
+        st.warning(f"Supabase error ({method} {endpoint}): {e.code}")
+        return None
+    except Exception as e:
+        st.warning(f"Supabase connection error: {e}")
+        return None
+
+def load_from_supabase():
+    """Load all events from Supabase"""
+    rows = supabase_request("GET", "events?select=*")
+    if rows is None:
+        return None
+    
+    events = {}
+    for row in rows:
+        d = row.get("date", "")
+        if not d:
+            continue
+        checklist = []
+        try:
+            checklist = json.loads(row.get("checklist", "[]"))
+        except:
+            checklist = []
+        event = {
+            "id": row.get("id", ""),
+            "brand": row.get("brand", ""),
+            "task": row.get("task", ""),
+            "content": row.get("content", ""),
+            "status": row.get("status", "planned"),
+            "notes": row.get("notes", ""),
+            "checklist": checklist,
+            "image": row.get("image", ""),
+        }
+        if d not in events:
+            events[d] = []
+        events[d].append(event)
+    return events
+
+def save_to_supabase(events):
+    """Full sync: delete all and re-insert"""
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        return False
+    
+    # Delete all
+    supabase_request("DELETE", "events?id=neq.none")
+    
+    # Insert all
+    all_rows = []
+    for date_str, ev_list in events.items():
+        for ev in ev_list:
+            all_rows.append({
+                "id": ev.get("id", gen_id()),
+                "date": date_str,
+                "brand": ev.get("brand", ""),
+                "task": ev.get("task", ""),
+                "content": ev.get("content", ""),
+                "status": ev.get("status", "planned"),
+                "notes": ev.get("notes", ""),
+                "checklist": json.dumps(ev.get("checklist", [])),
+                "image": ev.get("image", ""),
+            })
+    
+    if all_rows:
+        # Insert in batches of 50
+        for i in range(0, len(all_rows), 50):
+            batch = all_rows[i:i+50]
+            result = supabase_request("POST", "events", batch)
+            if result is None:
+                return False
+    return True
+
 def load_data():
+    """Load from Supabase first, fallback to local file"""
+    if SUPABASE_URL and SUPABASE_KEY:
+        data = load_from_supabase()
+        if data is not None:
+            return data
+    # Fallback to local
     try:
         if os.path.exists(DATA_FILE):
-            with open(DATA_FILE) as f: return json.load(f)
-    except: pass
+            with open(DATA_FILE) as f:
+                return json.load(f)
+    except:
+        pass
     return {}
 
 def save_data(events):
+    """Save to both Supabase and local file"""
     st.session_state.events = events
+    # Save locally
     try:
-        with open(DATA_FILE, 'w') as f: json.dump(events, f, indent=2)
-    except: pass
+        with open(DATA_FILE, 'w') as f:
+            json.dump(events, f, indent=2)
+    except:
+        pass
+    # Save to Supabase if configured
+    if SUPABASE_URL and SUPABASE_KEY:
+        save_to_supabase(events)
 
 # ===== SESSION STATE =====
 for key in ['month', 'year', 'sel_date', 'events', 'mode', 'edit_ev', 'edit_date']:
@@ -100,7 +208,6 @@ st.markdown('<div style="display:flex;align-items:center;gap:12px;margin-bottom:
 
 # ===== MODE: VIEW =====
 if st.session_state.mode == 'view':
-    # Month navigation
     c1, c2, c3, c4, c5 = st.columns([1,1,3,1,1])
     with c1:
         if st.button("◀", key="pm", help="Previous month"):
@@ -111,18 +218,14 @@ if st.session_state.mode == 'view':
         months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
         sel_month = st.selectbox("Month", range(1,13), index=st.session_state.month-1, label_visibility="collapsed",
                                 format_func=lambda x: months[x-1], key="m_sel")
-        if sel_month != st.session_state.month:
-            st.session_state.month = sel_month
-            st.rerun()
+        if sel_month != st.session_state.month: st.session_state.month = sel_month; st.rerun()
     with c3:
         months_full = ['January','February','March','April','May','June','July','August','September','October','November','December']
         st.markdown(f'<div class="month-title">{months_full[st.session_state.month-1]} {st.session_state.year}</div>', unsafe_allow_html=True)
     with c4:
         sel_year = st.selectbox("Year", range(datetime.now().year-5, datetime.now().year+6), 
                                index=5-(datetime.now().year - st.session_state.year), label_visibility="collapsed", key="y_sel")
-        if sel_year != st.session_state.year:
-            st.session_state.year = sel_year
-            st.rerun()
+        if sel_year != st.session_state.year: st.session_state.year = sel_year; st.rerun()
     with c5:
         if st.button("▶", key="nm", help="Next month"):
             st.session_state.month += 1
@@ -144,20 +247,15 @@ if st.session_state.mode == 'view':
                 if day == 0:
                     st.markdown('<div style="padding:8px 0;"></div>', unsafe_allow_html=True)
                     continue
-                
                 ds = f"{st.session_state.year}-{st.session_state.month:02d}-{day:02d}"
                 evs = st.session_state.events.get(ds, [])
-                
-                # Count events for display
                 ev_count = len(evs)
-                
                 if st.button(
                     f"{day}" + (f" ({ev_count})" if ev_count > 0 else ""),
                     key=f"d_{ds}", use_container_width=True,
                     type="secondary" if ds != sel else "primary"
                 ):
-                    st.session_state.sel_date = ds
-                    st.rerun()
+                    st.session_state.sel_date = ds; st.rerun()
 
     st.markdown("<hr>", unsafe_allow_html=True)
 
@@ -166,8 +264,7 @@ if st.session_state.mode == 'view':
     st.markdown(f"<h3>📋 Events for {d.strftime('%A, %B %d, %Y')}</h3>", unsafe_allow_html=True)
     
     if st.button("+ Add Event", use_container_width=True, key="add_main"):
-        st.session_state.mode = 'add'
-        st.rerun()
+        st.session_state.mode = 'add'; st.rerun()
     
     day_events = st.session_state.events.get(sel, [])
     if not day_events:
@@ -249,7 +346,6 @@ if st.session_state.mode in ['add', 'edit']:
                 if img_file:
                     img_data = "data:image/png;base64," + base64.b64encode(img_file.getvalue()).decode()
                 elif is_edit and ev.get('image'): img_data = ev['image']
-                
                 eid = ev.get('id', gen_id()) if is_edit else gen_id()
                 nd = st.session_state.sel_date
                 nev = {'id':eid,'brand':brand,'task':task,'content':content,'status':status,'notes':notes,'checklist':items,'image':img_data}
@@ -263,11 +359,9 @@ if st.session_state.mode in ['add', 'edit']:
                 if nd not in st.session_state.events: st.session_state.events[nd] = []
                 st.session_state.events[nd].append(nev)
                 save_data(st.session_state.events)
-                st.session_state.mode = 'view'
-                st.rerun()
+                st.session_state.mode = 'view'; st.rerun()
     
-    if st.button("← Cancel"):
-        st.session_state.mode = 'view'; st.rerun()
+    if st.button("← Cancel"): st.session_state.mode = 'view'; st.rerun()
 
 # ===== STATUSBAR =====
 total = sum(len(v) for v in st.session_state.events.values())
@@ -283,6 +377,46 @@ for b in brands:
     legend += f'<span style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:{c};display:inline-block;"></span>{b}</span>'
 legend += '</div>'
 
-st.markdown(f'<div class="stats-bar"><div>Total Events: {total} • {dates} dates</div>{legend}</div>', unsafe_allow_html=True)
+db_status = "🟢 Supabase connected" if (SUPABASE_URL and SUPABASE_KEY) else "🟡 Local storage only"
+st.markdown(f'<div class="stats-bar"><div>Total Events: {total} • {dates} dates</div>{legend}<div style="font-size:10px;">{db_status}</div></div>', unsafe_allow_html=True)
 
-st.markdown(f'<div style="text-align:center;padding:16px 0;font-size:11px;color:#64748b;">Planning Calendar v1.0 • Data saved to file</div>', unsafe_allow_html=True)
+# ===== SETUP INSTRUCTIONS (shown only when no Supabase configured) =====
+if not SUPABASE_URL or not SUPABASE_KEY:
+    with st.expander("⚙️ Setup Permanent Cloud Database (Supabase - Free)"):
+        st.markdown("""
+        **Step 1:** Go to [supabase.com](https://supabase.com) and sign up free
+        
+        **Step 2:** Create a new project → Copy your **Project URL** and **anon public key**
+        
+        **Step 3:** Run this SQL in Supabase SQL Editor:
+        ```sql
+        CREATE TABLE events (
+            id TEXT PRIMARY KEY,
+            date TEXT NOT NULL,
+            brand TEXT DEFAULT '',
+            task TEXT DEFAULT '',
+            content TEXT DEFAULT '',
+            status TEXT DEFAULT 'planned',
+            notes TEXT DEFAULT '',
+            checklist TEXT DEFAULT '[]',
+            image TEXT DEFAULT ''
+        );
+        CREATE INDEX idx_events_date ON events(date);
+        ```
+        
+        **Step 4:** For Streamlit Cloud deployment, add to **Secrets**:
+        ```
+        SUPABASE_URL = "https://your-project.supabase.co"
+        SUPABASE_KEY = "your-anon-key"
+        ```
+        
+        **Step 5:** For local testing, set environment variables:
+        ```
+        set SUPABASE_URL=https://your-project.supabase.co
+        set SUPABASE_KEY=your-anon-key
+        ```
+        """)
+else:
+    st.markdown(f'<div style="text-align:center;padding:8px 0;font-size:11px;color:#10b981;">✅ Data stored in Supabase cloud database — permanent, never lost</div>', unsafe_allow_html=True)
+
+st.markdown(f'<div style="text-align:center;padding:12px 0;font-size:11px;color:#64748b;">Planning Calendar v2.0</div>', unsafe_allow_html=True)
