@@ -943,20 +943,12 @@ def generate_po_for_brand(brand_name, suggestions, output_path):
     import openpyxl
     from openpyxl.utils import get_column_letter
     
-    # Resolve file paths
+    # Resolve template path
     base_dir = os.path.join(os.path.dirname(__file__), '..')
     template_path = os.path.join(base_dir, 'PT file Template for ginesys.xlsx')
-    inv_path = os.path.join(base_dir, 'Inventory.xlsx')
     
-    # Try to load inventory data for this brand
-    brand_inv = None
-    try:
-        if os.path.exists(inv_path):
-            inv_data = pd.read_excel(inv_path, sheet_name='Data', dtype=str)
-            brand_inv = inv_data[inv_data['Category 1'].str.strip() == brand_name]
-    except Exception as e:
-        print(f"Warning: Could not load inventory file: {e}")
-        brand_inv = None
+    # Load product details from database (Inventory was uploaded via UI)
+    brand_obj = Brand.query.filter_by(name=brand_name).first()
     
     # Try to load template, or create a new workbook
     try:
@@ -983,39 +975,24 @@ def generate_po_for_brand(brand_name, suggestions, output_path):
     # Fill data row by row
     row_num = 2
     for s in suggestions:
-        if brand_inv is not None and len(brand_inv) > 0:
-            inv_row = brand_inv[brand_inv['Barcode'] == s['barcode']]
-            if len(inv_row) > 0:
-                inv = inv_row.iloc[0]
-                category = str(inv.get('Division', '')).strip()
-                sub_category = str(inv.get('Section ', '')).strip()
-                product = str(inv.get('Department', '')).strip()
-                article = str(inv.get('Article Name', '')).strip()
-                style_code = str(inv.get('Item Code ', '')).strip()
-                color = str(inv.get('Category 3', '')).strip()
-                size = str(inv.get('Category 4', '')).strip()
-                mrp = float(str(inv.get('MRP', 0)).strip()) if str(inv.get('MRP', '')).strip() else 0
-                hsn = str(inv.get('HSN/SAC Code', '')).strip()
-                material = str(inv.get('Category 5', '')).strip()
-                gender = str(inv.get('Category 6', '')).strip()
-                season = str(inv.get('Description 1', 'SS26')).strip()
-                uom = str(inv.get('UOM', 'PCS')).strip()
-                margin = float(str(inv.get('Description 3', '25')).strip()) if str(inv.get('Description 3', '')).strip() else 25
-            else:
-                category = ''
-                sub_category = ''
-                product = ''
-                article = ''
-                style_code = ''
-                color = ''
-                size = ''
-                mrp = s['mrp']
-                hsn = ''
-                material = ''
-                gender = ''
-                season = 'SS26'
-                uom = 'PCS'
-                margin = s['margin']
+        # Get product details from database
+        product_db = Product.query.filter_by(barcode=s['barcode']).first()
+        
+        if product_db:
+            category = product_db.division or ''
+            sub_category = product_db.section or ''
+            product = product_db.department or ''
+            article = product_db.item_name or ''
+            style_code = product_db.item_code or ''
+            color = product_db.color or ''
+            size = product_db.size or ''
+            mrp = product_db.mrp or s['mrp']
+            hsn = ''
+            material = product_db.material or ''
+            gender = product_db.gender or ''
+            season = 'SS26'
+            uom = 'PCS'
+            margin = s['margin']
         else:
             category = ''
             sub_category = ''
