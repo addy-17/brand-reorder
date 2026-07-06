@@ -29,6 +29,7 @@ class Product(db.Model):
     gender = db.Column(db.String(50))
     mrp = db.Column(db.Float, default=0)
     vendor_name = db.Column(db.String(255))
+    hsn = db.Column(db.String(50))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Upload(db.Model):

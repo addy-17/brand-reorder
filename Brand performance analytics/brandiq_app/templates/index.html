@@ -1398,6 +1398,7 @@
                                 <table>
                                     <thead><tr>
                                         <th>Barcode</th>
+                                        <th>SKU</th>
                                         <th>Product</th>
                                         <th class="text-right">Avg/Week</th>
                                         <th class="text-right">Trend</th>
@@ -1413,6 +1414,7 @@
                                             return `
                                                 <tr>
                                                     <td class="font-mono" style="font-size:11px;">${item.barcode}</td>
+                                                    <td class="font-mono" style="font-size:11px;">${item.sku || '—'}</td>
                                                     <td>${item.product_name ? item.product_name.substring(0, 50) : '—'}</td>
                                                     <td class="text-right font-mono">${item.avg_weekly_sales}</td>
                                                     <td class="text-right font-mono" style="color:${trendColor}">

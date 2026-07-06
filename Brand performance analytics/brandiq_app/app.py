@@ -125,6 +125,7 @@ def parse_inventory(filepath):
         product.gender = str(row.get('Category 6', '')).strip()
         product.mrp = safe_float(row.get('MRP', 0))
         product.vendor_name = str(row.get('Vendor Name', '')).strip()
+        product.hsn = str(row.get('HSN/SAC Code', '')).strip()
         
         db.session.add(product)
         count += 1
@@ -922,6 +923,7 @@ def get_reorder_suggestions():
         
         suggestions.append({
             'barcode': barcode,
+            'sku': product.category2 or '',
             'product_name': product.item_name or '',
             'brand': brand_name,
             'avg_weekly_sales': round(avg_weekly, 1),
@@ -989,7 +991,7 @@ def generate_po_for_brand(brand_name, suggestions, output_path):
             color = product_db.color or ''
             size = product_db.size or ''
             mrp = product_db.mrp or s['mrp']
-            hsn = ''
+            hsn = product_db.hsn or ''
             material = product_db.material or ''
             gender = product_db.gender or ''
             season = 'SS26'
@@ -1011,7 +1013,7 @@ def generate_po_for_brand(brand_name, suggestions, output_path):
             uom = 'PCS'
             margin = s['margin']
         
-        # Write data
+        # Write data (column 1=Brand, 2=Category, 3=Sub Cat, 4=Product, 5=Article, 6=Style Code/SKU)
         ws.cell(row=row_num, column=1, value=brand_name)
         ws.cell(row=row_num, column=2, value=category)
         ws.cell(row=row_num, column=3, value=sub_category)
