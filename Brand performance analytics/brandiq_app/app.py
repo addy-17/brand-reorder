@@ -118,7 +118,7 @@ def parse_inventory(filepath):
         product.division = str(row.get('Division', '')).strip()
         product.section = str(row.get('Section ', '')).strip()
         product.department = str(row.get('Department', '')).strip()
-        product.category2 = str(row.get('Category 2', '')).strip()
+        product.sku = str(row.get('SKU', '')).strip()
         product.color = str(row.get('Category 3', '')).strip()
         product.size = str(row.get('Category 4', '')).strip()
         product.material = str(row.get('Category 5', '')).strip()
