@@ -16,10 +16,16 @@ from dotenv import load_dotenv
 from models import db, Brand, Product, Upload, Bill, BillItem, ReorderHistory, Prediction
 
 app = Flask(__name__)
-app.secret_key = 'brandiq-secret-key-2026'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///brandiq.db'
+app.secret_key = os.environ.get('SECRET_KEY', 'brandiq-secret-key-2026')
+
+# Database: Use PostgreSQL on Render, fallback to SQLite locally
+database_url = os.environ.get('DATABASE_URL', 'sqlite:///brandiq.db')
+# Fix for Render's postgres:// vs postgresql:// requirement
+if database_url.startswith('postgres://'):
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'uploads')
+app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER', os.path.join(os.path.dirname(__file__), 'uploads'))
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
 
 # Ensure upload directory exists
@@ -27,7 +33,7 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 load_dotenv()
 COHERE_API_KEY = os.environ.get("COHERE_API_KEY", "")
-co = cohere.Client(COHERE_API_KEY)
+co = cohere.Client(COHERE_API_KEY) if COHERE_API_KEY else None
 
 CORS(app)
 db.init_app(app)

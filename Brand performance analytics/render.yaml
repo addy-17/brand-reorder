@@ -13,6 +13,8 @@ services:
         generateValue: true
       - key: COHERE_API_KEY
         sync: false
+      - key: PYTHON_VERSION
+        value: "3.11.0"
 
 databases:
   - name: brandiq-db
