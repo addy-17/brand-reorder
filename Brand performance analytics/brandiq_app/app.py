@@ -16,13 +16,8 @@ from dotenv import load_dotenv
 from models import db, Brand, Product, Upload, Bill, BillItem, ReorderHistory, Prediction
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "brandiq-secret-key-2026")
-# Use DATABASE_URL env var for PostgreSQL (e.g. on Railway/Render), fallback to SQLite for local dev
-db_url = os.environ.get("DATABASE_URL", "sqlite:///brandiq.db")
-# Fix for Railway's postgres URL scheme (postgres:// vs postgresql://)
-if db_url and db_url.startswith("postgres://"):
-    db_url = db_url.replace("postgres://", "postgresql://", 1)
-app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+app.secret_key = 'brandiq-secret-key-2026'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///brandiq.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
