@@ -23,6 +23,7 @@ class Product(db.Model):
     section = db.Column(db.String(100))
     department = db.Column(db.String(100))
     category2 = db.Column(db.String(100))
+    sku = db.Column(db.String(100))
     color = db.Column(db.String(100))
     size = db.Column(db.String(50))
     material = db.Column(db.String(100))

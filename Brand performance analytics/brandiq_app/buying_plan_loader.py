@@ -9,12 +9,10 @@ import sys
 import json
 from pathlib import Path
 
-# Buying plan app is a sibling directory of the project root
 # Project root = Path(__file__).parent.parent = "Brand performance analytics"
-# Buying plan app = same parent directory as project root
+# Buying plan files are in the project root itself
 _PROJECT_ROOT = Path(__file__).parent.parent  # Brand performance analytics
-_PARENT_DIR = _PROJECT_ROOT.parent  # Desktop/work
-BUYING_PLAN_APP_DIR = _PARENT_DIR / "buying_plan_app"
+BUYING_PLAN_APP_DIR = _PROJECT_ROOT
 
 if BUYING_PLAN_APP_DIR.exists():
     sys.path.insert(0, str(BUYING_PLAN_APP_DIR))
