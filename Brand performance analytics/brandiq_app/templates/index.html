@@ -1,0 +1,2084 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BrandIQ - Brand Performance Analytics</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --bg: #0a0a0f;
+            --bg-card: rgba(255, 255, 255, 0.04);
+            --bg-card-hover: rgba(255, 255, 255, 0.07);
+            --border: rgba(255, 255, 255, 0.08);
+            --text: #e8e8f0;
+            --text-muted: #8888a0;
+            --primary: #4a7cf7;
+            --primary-glow: rgba(74, 124, 247, 0.25);
+            --success: #34d399;
+            --danger: #f87171;
+            --warning: #fbbf24;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.06);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+        /* Layout */
+        .app-container { max-width: 1440px; margin: 0 auto; padding: 20px 24px; }
+
+        /* Header */
+        .header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 0; margin-bottom: 28px;
+            border-bottom: 1px solid var(--border);
+        }
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .logo {
+            font-size: 22px; font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), #a78bfa);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .logo-sub { font-size: 12px; color: var(--text-muted); font-weight: 400; }
+        .header-right { display: flex; align-items: center; gap: 12px; }
+
+        .data-status-badge {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 12px; color: var(--text-muted);
+            background: var(--glass); border: 1px solid var(--glass-border);
+            padding: 6px 14px; border-radius: 20px;
+        }
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+        .status-dot.active { background: var(--success); box-shadow: 0 0 8px rgba(52, 211, 153, 0.4); }
+        .status-dot.inactive { background: var(--text-muted); }
+
+        /* Glass Card */
+        .glass-card {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 20px 24px;
+            transition: all 0.3s ease;
+        }
+        .glass-card:hover { background: var(--bg-card-hover); border-color: rgba(255,255,255,0.12); }
+
+        .card-title { font-size: 13px; font-weight: 500; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .card-value { font-size: 28px; font-weight: 700; font-family: 'JetBrains Mono', monospace; color: var(--text); }
+        .card-change { font-size: 12px; font-weight: 500; margin-top: 4px; }
+        .card-change.up { color: var(--success); }
+        .card-change.down { color: var(--danger); }
+
+        /* Grid */
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+
+        .main-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 20px; margin-bottom: 24px; }
+        .full-grid { display: grid; grid-template-columns: 1fr; gap: 20px; margin-bottom: 24px; }
+        .two-col-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+        .three-col-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+
+        /* Upload Section */
+        .upload-section {
+            background: linear-gradient(135deg, rgba(74, 124, 247, 0.05), rgba(167, 139, 250, 0.05));
+            border: 1px dashed rgba(74, 124, 247, 0.3);
+            border-radius: 16px; padding: 32px;
+            text-align: center; margin-bottom: 28px;
+        }
+        .upload-section.dragover {
+            border-color: var(--primary);
+            background: rgba(74, 124, 247, 0.1);
+        }
+        .upload-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+        .upload-desc { color: var(--text-muted); font-size: 14px; margin-bottom: 20px; }
+        .upload-buttons { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; }
+
+        .btn {
+            padding: 10px 24px; border-radius: 10px; font-size: 14px; font-weight: 500;
+            border: none; cursor: pointer; transition: all 0.2s;
+            font-family: inherit; display: inline-flex; align-items: center; gap: 8px;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: #3a6fe0; box-shadow: 0 4px 20px var(--primary-glow); }
+        .btn-outline {
+            background: transparent; color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+        .btn-danger { background: rgba(248, 113, 113, 0.15); color: var(--danger); border: 1px solid rgba(248, 113, 113, 0.3); }
+        .btn-danger:hover { background: rgba(248, 113, 113, 0.25); }
+        .btn-sm { padding: 6px 14px; font-size: 12px; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .file-input { display: none; }
+
+        /* Tables */
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        thead th {
+            text-align: left; padding: 10px 12px;
+            color: var(--text-muted); font-weight: 500; font-size: 11px;
+            text-transform: uppercase; letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border);
+        }
+        tbody td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        tbody tr:hover { background: rgba(255,255,255,0.03); }
+        .text-right { text-align: right; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+
+        /* Status badges */
+        .badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 500;
+        }
+        .badge-growing { background: rgba(52, 211, 153, 0.15); color: var(--success); }
+        .badge-declining { background: rgba(248, 113, 113, 0.15); color: var(--danger); }
+        .badge-stable { background: rgba(251, 191, 36, 0.15); color: var(--warning); }
+        .badge-up { background: rgba(52, 211, 153, 0.15); color: var(--success); }
+        .badge-down { background: rgba(248, 113, 113, 0.15); color: var(--danger); }
+
+        /* Chart containers */
+        .chart-container { position: relative; height: 280px; width: 100%; }
+        .chart-container-sm { position: relative; height: 200px; width: 100%; }
+
+        /* Toast */
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+        .toast {
+            padding: 12px 20px; border-radius: 10px; font-size: 13px; font-weight: 500;
+            backdrop-filter: blur(20px); animation: slideIn 0.3s ease;
+            min-width: 280px;
+        }
+        .toast-success { background: rgba(52, 211, 153, 0.2); border: 1px solid rgba(52, 211, 153, 0.3); color: var(--success); }
+        .toast-error { background: rgba(248, 113, 113, 0.2); border: 1px solid rgba(248, 113, 113, 0.3); color: var(--danger); }
+        .toast-info { background: rgba(74, 124, 247, 0.2); border: 1px solid rgba(74, 124, 247, 0.3); color: var(--primary); }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* Tab system */
+        .tabs { display: flex; gap: 4px; margin-bottom: 20px; background: var(--glass); border-radius: 12px; padding: 4px; border: 1px solid var(--glass-border); }
+        .tab { padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; color: var(--text-muted); border: none; background: transparent; font-family: inherit; }
+        .tab.active { background: rgba(74, 124, 247, 0.2); color: var(--primary); }
+        .tab:hover { color: var(--text); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Loading */
+        .loading-spinner { width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.6s linear infinite; display: inline-block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .loading-overlay {
+            display: flex; align-items: center; justify-content: center;
+            padding: 60px; color: var(--text-muted); gap: 12px;
+        }
+
+        /* Section header */
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .section-title { font-size: 16px; font-weight: 600; }
+        .section-actions { display: flex; gap: 8px; align-items: center; }
+
+        /* Prediction card */
+        .prediction-card {
+            background: linear-gradient(135deg, rgba(74, 124, 247, 0.08), rgba(167, 139, 250, 0.08));
+            border: 1px solid rgba(74, 124, 247, 0.2);
+            border-radius: 12px; padding: 16px 20px;
+        }
+        .prediction-value { font-size: 24px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+        .prediction-label { font-size: 12px; color: var(--text-muted); }
+
+        /* Week picker */
+        .week-picker { display: flex; align-items: center; gap: 8px; }
+        .week-picker input[type="date"], .week-picker select {
+            background: #1a1a2e; border: 1px solid rgba(74, 124, 247, 0.3); border-radius: 8px;
+            padding: 6px 12px; color: #e8e8f0; font-size: 12px; font-family: inherit;
+        }
+        .week-picker input[type="date"]:focus, .week-picker select:focus { 
+            outline: none; border-color: var(--primary); box-shadow: 0 0 8px var(--primary-glow);
+        }
+        .week-picker select option { background: #1a1a2e; color: #e8e8f0; }
+
+        /* Progress bar */
+        .upload-progress { margin-top: 12px; }
+        .progress-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--primary); border-radius: 2px; transition: width 0.5s ease; }
+        .progress-text { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .main-grid { grid-template-columns: 1fr; }
+            .two-col-grid { grid-template-columns: 1fr; }
+            .three-col-grid { grid-template-columns: 1fr; }
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+            .header { flex-direction: column; gap: 12px; align-items: flex-start; }
+        }
+        @media (max-width: 500px) {
+            .kpi-grid { grid-template-columns: 1fr; }
+            .app-container { padding: 12px; }
+            .upload-buttons { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                <div>
+                    <div class="logo">BrandIQ <span class="logo-sub">| Performance Analytics</span></div>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="data-status-badge" id="dataStatusBadge">
+                    <span class="status-dot inactive" id="statusDot"></span>
+                    <span id="statusText">No data loaded</span>
+                </div>
+                <button class="btn btn-outline btn-sm" onclick="refreshDashboard()">
+                    ⟳ Refresh
+                </button>
+            </div>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="upload-section" id="uploadSection">
+            <div class="upload-title">Upload Your Sales Data</div>
+            <div class="upload-desc">Upload your POS Bill Register and Brand Inventory Excel files to analyze brand performance</div>
+            <div class="upload-buttons">
+                <button class="btn btn-primary" onclick="document.getElementById('posFileInput').click()">
+                    Upload POS Bills
+                </button>
+                <input type="file" id="posFileInput" class="file-input" accept=".xlsx,.xls,.csv" onchange="uploadFile('pos', this)">
+                
+                <button class="btn btn-outline" onclick="document.getElementById('invFileInput').click()">
+                    Upload Inventory
+                </button>
+                <input type="file" id="invFileInput" class="file-input" accept=".xlsx,.xls,.csv" onchange="uploadFile('inventory', this)">
+            </div>
+            <div class="upload-progress" id="uploadProgress" style="display:none;">
+                <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+                <div class="progress-text" id="progressText">Processing...</div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('dashboard')">📈 Dashboard</button>
+            <button class="tab" onclick="switchTab('brands')">🏷️ Brands</button>
+            <button class="tab" onclick="switchTab('brand-growth')">📊 Brand Growth</button>
+            <button class="tab" onclick="switchTab('products')">📦 Products</button>
+            <button class="tab" onclick="switchTab('predictions')">🔮 Predictions</button>
+            <button class="tab" onclick="switchTab('reorder')">📦 Reorder</button>
+            <button class="tab" onclick="switchTab('trends')">📊 Trends</button>
+            <button class="tab" onclick="switchTab('ai-merchandising')">✨ AI Merchandising</button>
+            <button class="tab" onclick="switchTab('buying-plan')">🛒 Buying Plan</button>
+            <button class="tab" onclick="switchTab('data')">🗄️ Data</button>
+        </div>
+
+        <!-- Tab: Dashboard -->
+        <div class="tab-content active" id="tab-dashboard">
+            <!-- Week Picker -->
+            <div class="section-header">
+                <div class="section-title">Executive Dashboard</div>
+                <div class="week-picker">
+                    <label style="font-size:12px;color:var(--text-muted);">Week:</label>
+                    <input type="date" id="weekStart" onchange="refreshDashboard()">
+                    <span style="color:var(--text-muted);font-size:12px;">to</span>
+                    <input type="date" id="weekEnd" onchange="refreshDashboard()">
+                </div>
+            </div>
+
+            <!-- AI Summary Card -->
+            <div class="glass-card" style="margin-bottom:20px;background:linear-gradient(135deg,rgba(74,124,247,0.05),rgba(167,139,250,0.05));border-color:rgba(74,124,247,0.2);">
+                <div class="section-header">
+                    <div class="card-title" style="font-size:14px;text-transform:none;color:var(--text);">Business Summary</div>
+                    <button class="btn btn-outline btn-sm" onclick="loadSummary()">⟳ Refresh</button>
+                </div>
+                <div id="summaryContent" style="font-size:13px;color:var(--text-muted);line-height:1.8;">
+                    <div class="loading-overlay">Loading summary...</div>
+                </div>
+            </div>
+
+            <!-- KPI Grid -->
+            <div class="kpi-grid" id="kpiGrid">
+                <div class="glass-card"><div class="card-title">Total Revenue</div><div class="card-value" id="kpiRevenue">—</div><div class="card-change" id="kpiRevenueChange"></div></div>
+                <div class="glass-card"><div class="card-title">Total Bills</div><div class="card-value" id="kpiBills">—</div><div class="card-change" id="kpiBillsChange"></div></div>
+                <div class="glass-card"><div class="card-title">Units Sold</div><div class="card-value" id="kpiUnits">—</div></div>
+                <div class="glass-card"><div class="card-title">Avg Bill Value</div><div class="card-value" id="kpiABV">—</div><div class="card-change" id="kpiABVChange"></div></div>
+                <div class="glass-card"><div class="card-title">Discount Given</div><div class="card-value" id="kpiDiscount">—</div></div>
+            </div>
+
+            <!-- Main Grid -->
+            <div class="main-grid">
+                <!-- Revenue Trend Chart -->
+                <div class="glass-card">
+                    <div class="card-title">Daily Revenue Trend</div>
+                    <div class="chart-container"><canvas id="revenueTrendChart"></canvas></div>
+                </div>
+                <!-- Payment Distribution -->
+                <div class="glass-card">
+                    <div class="card-title">Payment Distribution</div>
+                    <div class="chart-container-sm"><canvas id="paymentChart"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Brand Rankings (preview) -->
+            <div class="glass-card" style="margin-bottom:20px;">
+                <div class="section-header">
+                    <div class="card-title">Brand Rankings</div>
+                    <button class="btn btn-outline btn-sm" onclick="switchTab('brands')">View All →</button>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>#</th><th>Brand</th><th class="text-right">Revenue</th><th class="text-right">Units</th><th class="text-right">Share</th><th class="text-right">Growth</th><th>Status</th></tr></thead>
+                        <tbody id="brandTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Brands -->
+        <div class="tab-content" id="tab-brands">
+            <div class="section-header">
+                <div class="section-title">🏷️ Full Brand Rankings</div>
+            </div>
+            <div class="glass-card">
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>#</th><th>Brand</th><th class="text-right">Revenue</th><th class="text-right">Units</th><th class="text-right">Bills</th><th class="text-right">Avg Price</th><th class="text-right">Discount</th><th class="text-right">Share</th><th class="text-right">Growth</th><th>Status</th></tr></thead>
+                        <tbody id="brandsFullTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Products -->
+        <div class="tab-content" id="tab-products">
+            <div class="section-header">
+                <div class="section-title">📦 Top Selling Products</div>
+            </div>
+            <div class="glass-card">
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>#</th><th>Barcode</th><th>Product Name</th><th>Brand</th><th class="text-right">Units Sold</th><th class="text-right">Revenue</th><th class="text-right">Bills</th></tr></thead>
+                        <tbody id="productsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Predictions -->
+        <div class="tab-content" id="tab-predictions">
+            <div class="section-header">
+                <div class="section-title">🔮 Revenue Prediction & Brand Trends</div>
+            </div>
+            
+            <!-- Prediction Accuracy Tracker -->
+            <div class="glass-card" style="margin-bottom:20px;background:linear-gradient(135deg,rgba(74,124,247,0.05),rgba(167,139,250,0.05));border-color:rgba(74,124,247,0.2);">
+                <div class="section-header">
+                    <div class="card-title" style="font-size:14px;text-transform:none;color:var(--text);">🎯 Prediction Accuracy Tracker</div>
+                    <button class="btn btn-outline btn-sm" onclick="loadAccuracy()">⟳ Refresh</button>
+                </div>
+                <div id="accuracyContent">
+                    <div class="loading-overlay">Loading accuracy data...</div>
+                </div>
+            </div>
+            
+            <div class="two-col-grid">
+                <div class="glass-card">
+                    <div class="card-title">Next Week Revenue Forecast</div>
+                    <div id="predictionContent">
+                        <div class="loading-overlay">Load data to see predictions</div>
+                    </div>
+                </div>
+                <div class="glass-card">
+                    <div class="card-title">Weekly Revenue History</div>
+                    <div class="chart-container"><canvas id="weeklyTrendChart"></canvas></div>
+                </div>
+            </div>
+            
+            <!-- Product Breakout Predictions -->
+            <div class="glass-card" style="margin-top:20px;">
+                <div class="section-header">
+                    <div class="card-title">🚀 Product Breakout Predictions</div>
+                    <button class="btn btn-outline btn-sm" onclick="loadBreakoutPredictions()">⟳ Refresh</button>
+                </div>
+                <div id="breakoutContent">
+                    <div class="loading-overlay">Loading breakout predictions...</div>
+                </div>
+            </div>
+            
+            <div class="glass-card" style="margin-top:20px;">
+                <div class="card-title">📊 Brand Trend Analysis</div>
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>Brand</th><th class="text-right">Avg Revenue</th><th class="text-right">Trend %</th><th class="text-right">Direction</th><th>Data Points</th></tr></thead>
+                        <tbody id="brandTrendsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Trends -->
+        <div class="tab-content" id="tab-trends">
+            <div class="section-header">
+                <div class="section-title">📊 Category / SubCategory / Product Trends</div>
+                <div class="week-picker">
+                    <label style="font-size:12px;color:var(--text-muted);">Level:</label>
+                    <select id="trendsLevel" onchange="loadTrends()" style="background:#1a1a2e;border:1px solid rgba(74,124,247,0.3);border-radius:8px;padding:6px 12px;color:#e8e8f0;font-size:12px;font-family:inherit;">
+                        <option value="category">Category</option>
+                        <option value="subcategory">Sub Category</option>
+                        <option value="product">Product</option>
+                    </select>
+                    <select id="trendsParent" onchange="loadTrends()" style="background:#1a1a2e;border:1px solid rgba(74,124,247,0.3);border-radius:8px;padding:6px 12px;color:#e8e8f0;font-size:12px;font-family:inherit;display:none;">
+                        <option value="">All</option>
+                    </select>
+                    <span style="color:var(--text-muted);font-size:12px;">From:</span>
+                    <input type="date" id="trendsStart" onchange="loadTrends()">
+                    <span style="color:var(--text-muted);font-size:12px;">To:</span>
+                    <input type="date" id="trendsEnd" onchange="loadTrends()">
+                </div>
+            </div>
+
+            <!-- Summary Stats -->
+            <div class="kpi-grid" id="trendsSummary" style="margin-bottom:24px;">
+                <div class="glass-card"><div class="card-title">Total Items</div><div class="card-value" id="trendsItems">—</div></div>
+                <div class="glass-card"><div class="card-title">Total Revenue</div><div class="card-value" id="trendsRevenue">—</div></div>
+                <div class="glass-card"><div class="card-title">Total Units</div><div class="card-value" id="trendsUnits">—</div></div>
+                <div class="glass-card"><div class="card-title">Growing</div><div class="card-value" id="trendsGrowing" style="color:var(--success);">—</div></div>
+                <div class="glass-card"><div class="card-title">Declining</div><div class="card-value" id="trendsDeclining" style="color:var(--danger);">—</div></div>
+            </div>
+
+            <!-- Trend Chart -->
+            <div class="glass-card" style="margin-bottom:24px;">
+                <div class="card-title">📈 Revenue Trend (Top 5)</div>
+                <div class="chart-container"><canvas id="trendsChart"></canvas></div>
+            </div>
+
+            <!-- Items Table -->
+            <div class="glass-card">
+                <div class="card-title">Performance Details</div>
+                <div class="table-container">
+                    <table>
+                        <thead><tr>
+                            <th>#</th>
+                            <th>Name</th>
+                            <th class="text-right">Revenue</th>
+                            <th class="text-right">Units</th>
+                            <th class="text-right">Bills</th>
+                            <th class="text-right">Growth</th>
+                            <th class="text-right">Trend</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr></thead>
+                        <tbody id="trendsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Reorder -->
+        <div class="tab-content" id="tab-reorder">
+            <div class="section-header">
+                <div class="section-title">📦 ML-Based Reorder Suggestions</div>
+                <button class="btn btn-primary btn-sm" onclick="exportAllPO()">📥 Export All POs</button>
+            </div>
+
+            <!-- Summary Stats -->
+            <div class="kpi-grid" id="reorderSummary" style="margin-bottom:24px;">
+                <div class="glass-card"><div class="card-title">Brands to Reorder</div><div class="card-value" id="reorderBrands">—</div></div>
+                <div class="glass-card"><div class="card-title">Products to Reorder</div><div class="card-value" id="reorderItems">—</div></div>
+                <div class="glass-card"><div class="card-title">Total Qty</div><div class="card-value" id="reorderTotalQty">—</div></div>
+            </div>
+
+            <!-- Brand-wise Reorder Cards -->
+            <div id="reorderBrandCards"></div>
+        </div>
+
+        <!-- Tab: Brand Growth -->
+        <div class="tab-content" id="tab-brand-growth">
+            <div class="section-header">
+                <div class="section-title">📊 Brand Growth Analytics</div>
+                <div class="week-picker">
+                    <label style="font-size:12px;color:var(--text-muted);">Period:</label>
+                    <select id="growthWeeks" onchange="loadBrandGrowth()" style="background:#1a1a2e;border:1px solid rgba(74,124,247,0.3);border-radius:8px;padding:6px 12px;color:#e8e8f0;font-size:12px;font-family:inherit;">
+                        <option value="4">Last 4 Weeks</option>
+                        <option value="8" selected>Last 8 Weeks</option>
+                        <option value="12">Last 12 Weeks</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Summary Stats -->
+            <div class="kpi-grid" id="growthSummary" style="margin-bottom:24px;">
+                <div class="glass-card"><div class="card-title">Total Brands</div><div class="card-value" id="growthTotalBrands">—</div></div>
+                <div class="glass-card"><div class="card-title">Growing Brands</div><div class="card-value" id="growthGrowingCount" style="color:var(--success);">—</div></div>
+                <div class="glass-card"><div class="card-title">Declining Brands</div><div class="card-value" id="growthDecliningCount" style="color:var(--danger);">—</div></div>
+                <div class="glass-card"><div class="card-title">Avg Growth Rate</div><div class="card-value" id="growthAvgRate">—</div></div>
+            </div>
+
+            <!-- Top Growing & Declining -->
+            <div class="two-col-grid" style="margin-bottom:24px;">
+                <!-- Top Growing -->
+                <div class="glass-card">
+                    <div class="card-title" style="color:var(--success);">🚀 Top Growing Brands</div>
+                    <div class="table-container">
+                        <table>
+                            <thead><tr><th>#</th><th>Brand</th><th class="text-right">Growth</th><th class="text-right">Revenue</th><th class="text-right">Streak</th></tr></thead>
+                            <tbody id="topGrowingBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Top Declining -->
+                <div class="glass-card">
+                    <div class="card-title" style="color:var(--danger);">📉 Declining Brands</div>
+                    <div class="table-container">
+                        <table>
+                            <thead><tr><th>#</th><th>Brand</th><th class="text-right">Growth</th><th class="text-right">Revenue</th><th class="text-right">Streak</th></tr></thead>
+                            <tbody id="topDecliningBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Growth Trend Chart -->
+            <div class="glass-card" style="margin-bottom:24px;">
+                <div class="card-title">📈 Brand Growth Trends (Top 5 Growing)</div>
+                <div class="chart-container"><canvas id="growthTrendChart"></canvas></div>
+            </div>
+
+            <!-- Full Brand Growth Table -->
+            <div class="glass-card">
+                <div class="section-header">
+                    <div class="card-title">All Brands - Growth Details</div>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn btn-outline btn-sm" onclick="sortGrowthTable('latest_growth')">Sort by Growth</button>
+                        <button class="btn btn-outline btn-sm" onclick="sortGrowthTable('consistency')">Sort by Consistency</button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>Brand</th><th class="text-right">Latest Growth</th><th class="text-right">4W Avg</th><th class="text-right">Momentum</th><th class="text-right">Consistency</th><th class="text-right">Revenue</th><th>Streak</th></tr></thead>
+                        <tbody id="allBrandsGrowthBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: AI Merchandising -->
+        <div class="tab-content" id="tab-ai-merchandising">
+            <div class="section-header">
+                <div class="section-title">✨ AI Merchandising & Stylist</div>
+                <div>
+                    <button class="btn btn-outline btn-sm" onclick="loadAIMerchandising(true)">⟳ Force Refresh Report</button>
+                    <button class="btn btn-primary btn-sm" onclick="loadAIMerchandising(false)">Load Insights</button>
+                </div>
+            </div>
+            
+            <div id="aiMerchandisingContent">
+                <div class="loading-overlay">Click 'Generate AI Insights' to have the AI analyze your inventory...</div>
+            </div>
+        </div>
+
+        <!-- Tab: Buying Plan -->
+        <div class="tab-content" id="tab-buying-plan">
+            <div class="section-header">
+                <div class="section-title">🛒 Buying Plan Integration</div>
+                <div>
+                    <button class="btn btn-outline btn-sm" onclick="loadBuyingPlan(true)">⟳ Refresh</button>
+                    <button class="btn btn-primary btn-sm" onclick="addSelectedToReorder()">📥 Add Selected to Reorder</button>
+                    <button class="btn btn-danger btn-sm" onclick="clearBuyingPlanSelected()">🗑️ Clear</button>
+                </div>
+            </div>
+
+            <!-- Summary Stats -->
+            <div class="kpi-grid" id="buyingPlanSummary" style="margin-bottom:24px;">
+                <div class="glass-card"><div class="card-title">Total Products</div><div class="card-value" id="bpTotalProducts">—</div></div>
+                <div class="glass-card"><div class="card-title">Brands</div><div class="card-value" id="bpTotalBrands">—</div></div>
+                <div class="glass-card"><div class="card-title">AI Suggestions</div><div class="card-value" id="bpAISuggestions" style="color:var(--success);">—</div></div>
+                <div class="glass-card"><div class="card-title">Selected</div><div class="card-value" id="bpSelectedCount">0</div></div>
+            </div>
+
+            <!-- AI Suggestions Section -->
+            <div class="glass-card" style="margin-bottom:20px;background:linear-gradient(135deg,rgba(74,124,247,0.05),rgba(167,139,250,0.05));border-color:rgba(74,124,247,0.2);">
+                <div class="section-header">
+                    <div class="card-title" style="font-size:14px;text-transform:none;color:var(--text);">🤖 AI Suggestions — Items to Stock from Buying Plan</div>
+                    <button class="btn btn-outline btn-sm" onclick="loadBuyingPlanSuggestions()">⟳ Refresh</button>
+                </div>
+                <div id="bpAIContent">
+                    <div class="loading-overlay">Click "Load AI Suggestions" to see items you should consider stocking...</div>
+                </div>
+            </div>
+
+            <!-- Browse All Section -->
+            <div class="glass-card">
+                <div class="section-header">
+                    <div class="card-title" style="font-size:14px;text-transform:none;color:var(--text);">📋 Browse All Buying Plan Products</div>
+                </div>
+                
+                <!-- Filters -->
+                <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+                    <select id="bpBrandFilter" onchange="loadBuyingPlanProducts()" style="background:#1a1a2e;border:1px solid rgba(74,124,247,0.3);border-radius:8px;padding:6px 12px;color:#e8e8f0;font-size:12px;font-family:inherit;">
+                        <option value="">All Brands</option>
+                    </select>
+                    <select id="bpCategoryFilter" onchange="loadBuyingPlanProducts()" style="background:#1a1a2e;border:1px solid rgba(74,124,247,0.3);border-radius:8px;padding:6px 12px;color:#e8e8f0;font-size:12px;font-family:inherit;">
+                        <option value="">All Categories</option>
+                    </select>
+                    <input type="text" id="bpSearch" placeholder="🔍 Search products..." 
+                           style="background:#1a1a2e;border:1px solid rgba(74,124,247,0.3);border-radius:8px;padding:6px 12px;color:#e8e8f0;font-size:12px;font-family:inherit;flex:1;min-width:200px;"
+                           onkeyup="if(event.key==='Enter') loadBuyingPlanProducts()">
+                    <button class="btn btn-outline btn-sm" onclick="loadBuyingPlanProducts()">Search</button>
+                </div>
+                
+                <!-- Products Grid -->
+                <div id="bpProductsContainer">
+                    <div class="loading-overlay">Loading buying plan products...</div>
+                </div>
+                
+                <!-- Pagination -->
+                <div style="display:flex;justify-content:center;gap:8px;margin-top:16px;" id="bpPagination"></div>
+            </div>
+        </div>
+
+        <!-- Tab: Data -->
+        <div class="tab-content" id="tab-data">
+            <div class="section-header">
+                <div class="section-title">🗄️ Database Status</div>
+                <button class="btn btn-danger btn-sm" onclick="resetData()">🗑️ Clear All Data</button>
+            </div>
+            <div class="three-col-grid" id="dataStatusGrid">
+                <div class="glass-card"><div class="card-title">Brands</div><div class="card-value" id="dataBrands">—</div></div>
+                <div class="glass-card"><div class="card-title">Products</div><div class="card-value" id="dataProducts">—</div></div>
+                <div class="glass-card"><div class="card-title">Bills</div><div class="card-value" id="dataBills">—</div></div>
+                <div class="glass-card"><div class="card-title">Bill Items</div><div class="card-value" id="dataItems">—</div></div>
+                <div class="glass-card"><div class="card-title">Uploads</div><div class="card-value" id="dataUploads">—</div></div>
+                <div class="glass-card"><div class="card-title">Date Range</div><div class="card-value" style="font-size:14px;" id="dataDateRange">—</div></div>
+            </div>
+
+            <!-- Upload History -->
+            <div class="glass-card" style="margin-top:20px;">
+                <div class="card-title">Upload History</div>
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>File</th><th>Type</th><th>Rows</th><th>Status</th><th>Uploaded</th></tr></thead>
+                        <tbody id="uploadHistoryBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // ─── STATE ────────────────────────────────────────────────────────
+        let charts = {};
+
+        // ─── TOAST ────────────────────────────────────────────────────────
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s'; }, 3000);
+            setTimeout(() => toast.remove(), 3500);
+        }
+
+        // ─── TAB SWITCHING ───────────────────────────────────────────────
+        function switchTab(name) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.tab[onclick*="${name}"]`).classList.add('active');
+            document.getElementById(`tab-${name}`).classList.add('active');
+            
+            if (name === 'brands') loadBrands();
+            if (name === 'brand-growth') loadBrandGrowth();
+            if (name === 'products') loadProducts();
+            if (name === 'predictions') loadPredictions();
+            if (name === 'reorder') loadReorderSuggestions();
+            if (name === 'trends') loadTrends();
+            if (name === 'ai-merchandising') loadAIMerchandising();
+            if (name === 'buying-plan') loadBuyingPlan();
+            if (name === 'data') loadDataStatus();
+        }
+
+        // ─── FILE UPLOAD ─────────────────────────────────────────────────
+        function uploadFile(type, input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const endpoint = type === 'pos' ? '/api/upload/pos' : '/api/upload/inventory';
+            const label = type === 'pos' ? 'POS Bills' : 'Inventory';
+
+            // Show progress
+            const progress = document.getElementById('uploadProgress');
+            const fill = document.getElementById('progressFill');
+            const text = document.getElementById('progressText');
+            progress.style.display = 'block';
+            fill.style.width = '30%';
+            text.textContent = `Uploading ${label}...`;
+
+            fetch(endpoint, {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    fill.style.width = '100%';
+                    text.textContent = `✅ ${data.message}`;
+                    showToast(data.message, 'success');
+                    setTimeout(() => { progress.style.display = 'none'; }, 2000);
+                    refreshDashboard();
+                    loadDataStatus();
+                } else {
+                    throw new Error(data.error || 'Upload failed');
+                }
+            })
+            .catch(err => {
+                fill.style.width = '0%';
+                text.textContent = `❌ Error: ${err.message}`;
+                showToast(err.message, 'error');
+                setTimeout(() => { progress.style.display = 'none'; }, 3000);
+            });
+
+            input.value = '';
+        }
+
+        // ─── DASHBOARD ───────────────────────────────────────────────────
+        function refreshDashboard() {
+            const weekStart = document.getElementById('weekStart').value;
+            const weekEnd = document.getElementById('weekEnd').value;
+            
+            let url = '/api/dashboard?';
+            if (weekStart) url += `week_start=${weekStart}&`;
+            if (weekEnd) url += `week_end=${weekEnd}&`;
+
+            fetch(url)
+                .then(r => r.json())
+                .then(data => {
+                    updateKPIs(data.kpis);
+                    updateBrandTable(data.brands);
+                    updateRevenueChart(data.daily_trend);
+                    updatePaymentChart(data.payment_distribution);
+                    updateDataStatusBadge(data);
+                    updateBrandTrendsPreview(data.brand_trends);
+                })
+                .catch(err => {
+                    console.error('Dashboard error:', err);
+                });
+        }
+
+        function updateKPIs(kpis) {
+            document.getElementById('kpiRevenue').textContent = '₹' + formatNumber(kpis.total_revenue);
+            document.getElementById('kpiBills').textContent = kpis.total_bills;
+            document.getElementById('kpiUnits').textContent = kpis.total_items;
+            document.getElementById('kpiABV').textContent = '₹' + formatNumber(kpis.avg_bill_value);
+            document.getElementById('kpiDiscount').textContent = '₹' + formatNumber(kpis.total_discount);
+
+            const revChange = document.getElementById('kpiRevenueChange');
+            if (kpis.revenue_growth !== 0) {
+                revChange.textContent = `${kpis.revenue_growth > 0 ? '▲' : '▼'} ${Math.abs(kpis.revenue_growth)}% vs last week`;
+                revChange.className = `card-change ${kpis.revenue_growth >= 0 ? 'up' : 'down'}`;
+            } else {
+                revChange.textContent = 'No prior week data';
+                revChange.className = 'card-change';
+            }
+
+            const billsChange = document.getElementById('kpiBillsChange');
+            if (kpis.prev_bills > 0) {
+                const change = ((kpis.total_bills - kpis.prev_bills) / kpis.prev_bills * 100);
+                billsChange.textContent = `${change >= 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(1)}% vs last week`;
+                billsChange.className = `card-change ${change >= 0 ? 'up' : 'down'}`;
+            }
+
+            const abvChange = document.getElementById('kpiABVChange');
+            if (kpis.prev_revenue > 0 && kpis.total_bills > 0 && kpis.prev_bills > 0) {
+                const prevABV = kpis.prev_revenue / kpis.prev_bills;
+                const curABV = kpis.avg_bill_value;
+                const change = ((curABV - prevABV) / prevABV * 100);
+                abvChange.textContent = `${change >= 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(1)}% vs last week`;
+                abvChange.className = `card-change ${change >= 0 ? 'up' : 'down'}`;
+            }
+        }
+
+        function updateBrandTable(brands) {
+            const tbody = document.getElementById('brandTableBody');
+            tbody.innerHTML = brands.slice(0, 10).map((b, i) => `
+                <tr>
+                    <td>${i + 1}</td>
+                    <td><strong>${b.name}</strong></td>
+                    <td class="text-right font-mono">₹${formatNumber(b.revenue)}</td>
+                    <td class="text-right font-mono">${b.units}</td>
+                    <td class="text-right font-mono">${b.share}%</td>
+                    <td class="text-right font-mono ${b.growth >= 0 ? 'up' : 'down'}" style="color:${b.growth >= 0 ? 'var(--success)' : 'var(--danger)'}">
+                        ${b.growth > 0 ? '+' : ''}${b.growth}%
+                    </td>
+                    <td><span class="badge badge-${b.status}">${b.status === 'growing' ? '🚀' : b.status === 'declining' ? '🔻' : '➡️'} ${b.status}</span></td>
+                </tr>
+            `).join('');
+        }
+
+        function updateRevenueChart(dailyData) {
+            if (charts.revenue) charts.revenue.destroy();
+            
+            const ctx = document.getElementById('revenueTrendChart').getContext('2d');
+            
+            if (!dailyData || dailyData.length === 0) {
+                charts.revenue = new Chart(ctx, {
+                    type: 'line',
+                    data: { labels: [], datasets: [] },
+                    options: { plugins: { title: { display: true, text: 'No data available', color: '#888' } } }
+                });
+                return;
+            }
+
+            charts.revenue = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dailyData.map(d => d.date.slice(5)),
+                    datasets: [{
+                        label: 'Revenue',
+                        data: dailyData.map(d => d.revenue),
+                        borderColor: '#4a7cf7',
+                        backgroundColor: 'rgba(74, 124, 247, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#4a7cf7',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#888' } },
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#888', callback: v => '₹' + (v/1000).toFixed(0) + 'k' } }
+                    }
+                }
+            });
+        }
+
+        function updatePaymentChart(payments) {
+            if (charts.payment) charts.payment.destroy();
+            
+            const ctx = document.getElementById('paymentChart').getContext('2d');
+            
+            if (!payments || payments.length === 0) {
+                charts.payment = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: { labels: ['No Data'], datasets: [{ data: [1], backgroundColor: ['#333'] }] },
+                    options: { plugins: { title: { display: true, text: 'No data', color: '#888' } } }
+                });
+                return;
+            }
+
+            const colors = {
+                'Cash': '#34d399',
+                'UPI': '#4a7cf7',
+                'Credit/Debit Card': '#a78bfa',
+                'Credit Card': '#a78bfa',
+                'Debit Card': '#8b5cf6',
+                'Wallet': '#fbbf24',
+                'Gift Card': '#f472b6'
+            };
+
+            charts.payment = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: payments.map(p => p.mode),
+                    datasets: [{
+                        data: payments.map(p => p.amount),
+                        backgroundColor: payments.map(p => colors[p.mode] || '#6366f1'),
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#888', padding: 12, font: { size: 11 } } }
+                    },
+                    cutout: '65%'
+                }
+            });
+        }
+
+        function updateBrandTrendsPreview(trends) {
+            if (!trends || trends.length === 0) return;
+            // Only show top 3 growing and top 3 declining
+            const growing = trends.filter(t => t.direction === 'up').slice(0, 3);
+            const declining = trends.filter(t => t.direction === 'down').slice(0, 3);
+            
+            // We'll show these in the predictions tab instead
+        }
+
+        // ─── AI SUMMARY ────────────────────────────────────────────────
+        function loadSummary() {
+            const weekStart = document.getElementById('weekStart').value;
+            const weekEnd = document.getElementById('weekEnd').value;
+            let url = '/api/summary?';
+            if (weekStart) url += `week_start=${weekStart}&`;
+            if (weekEnd) url += `week_end=${weekEnd}&`;
+            
+            fetch(url)
+                .then(r => r.json())
+                .then(data => {
+                    const content = document.getElementById('summaryContent');
+                    content.innerHTML = data.sentences.map(s => `<div style="margin-bottom:6px;">• ${s}</div>`).join('');
+                })
+                .catch(() => {
+                    document.getElementById('summaryContent').innerHTML = 
+                        '<div style="color:var(--text-muted);">Load data to see summary</div>';
+                });
+        }
+
+        function updateDataStatusBadge(data) {
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            
+            if (data.kpis.total_bills > 0) {
+                dot.className = 'status-dot active';
+                text.textContent = `${data.kpis.total_bills} bills · ${data.brands.length} brands`;
+            } else {
+                dot.className = 'status-dot inactive';
+                text.textContent = 'No data loaded';
+            }
+        }
+
+        // ─── BRANDS TAB ──────────────────────────────────────────────────
+        function loadBrands() {
+            fetch('/api/brands')
+                .then(r => r.json())
+                .then(data => {
+                    const tbody = document.getElementById('brandsFullTableBody');
+                    tbody.innerHTML = data.brands.map((b, i) => `
+                        <tr>
+                            <td>${i + 1}</td>
+                            <td><strong>${b.name}</strong></td>
+                            <td class="text-right font-mono">₹${formatNumber(b.revenue)}</td>
+                            <td class="text-right font-mono">${b.units}</td>
+                            <td class="text-right font-mono">${b.bills}</td>
+                            <td class="text-right font-mono">₹${formatNumber(b.avg_price)}</td>
+                            <td class="text-right font-mono">₹${formatNumber(b.discount)}</td>
+                            <td class="text-right font-mono">${b.share}%</td>
+                            <td class="text-right font-mono" style="color:${b.growth >= 0 ? 'var(--success)' : 'var(--danger)'}">
+                                ${b.growth > 0 ? '+' : ''}${b.growth}%
+                            </td>
+                            <td><span class="badge badge-${b.status}">${b.status}</span></td>
+                        </tr>
+                    `).join('');
+                });
+        }
+
+        // ─── PRODUCTS TAB ────────────────────────────────────────────────
+        function loadProducts() {
+            fetch('/api/products')
+                .then(r => r.json())
+                .then(data => {
+                    const tbody = document.getElementById('productsTableBody');
+                    tbody.innerHTML = data.products.map((p, i) => `
+                        <tr>
+                            <td>${i + 1}</td>
+                            <td class="font-mono" style="font-size:11px;">${p.barcode}</td>
+                            <td>${p.item_name ? p.item_name.substring(0, 60) : '—'}</td>
+                            <td>${p.brand}</td>
+                            <td class="text-right font-mono">${p.units}</td>
+                            <td class="text-right font-mono">₹${formatNumber(p.revenue)}</td>
+                            <td class="text-right font-mono">${p.bills}</td>
+                        </tr>
+                    `).join('');
+                });
+        }
+
+        // ─── PREDICTIONS TAB ─────────────────────────────────────────────
+        function loadPredictions() {
+            fetch('/api/predictions')
+                .then(r => r.json())
+                .then(data => {
+                    // Revenue prediction
+                    const predContent = document.getElementById('predictionContent');
+                    if (data.revenue_prediction) {
+                        const p = data.revenue_prediction;
+                        predContent.innerHTML = `
+                            <div class="prediction-card" style="margin-bottom:16px;">
+                                <div class="prediction-label">Predicted Revenue for ${p.next_week_start} to ${p.next_week_end}</div>
+                                <div class="prediction-value" style="color:${p.trend === 'up' ? 'var(--success)' : 'var(--danger)'}">
+                                    ₹${formatNumber(p.predicted_revenue)}
+                                </div>
+                                <div style="display:flex;gap:16px;margin-top:8px;flex-wrap:wrap;">
+                                    <div><span class="prediction-label">Current: </span><span class="font-mono" style="font-size:14px;">₹${formatNumber(p.current_revenue)}</span></div>
+                                    <div><span class="prediction-label">Growth: </span><span class="font-mono" style="font-size:14px;color:${p.trend === 'up' ? 'var(--success)' : 'var(--danger)'}">${p.growth_rate > 0 ? '+' : ''}${p.growth_rate}%</span></div>
+                                    <div><span class="prediction-label">Confidence: </span><span class="font-mono" style="font-size:14px;">${p.confidence}%</span></div>
+                                </div>
+                                <div style="margin-top:12px;">
+                                    <span class="badge ${p.trend === 'up' ? 'badge-growing' : 'badge-declining'}" style="font-size:13px;">
+                                        ${p.trend === 'up' ? '📈 Uptrend Expected' : '📉 Downtrend Expected'}
+                                    </span>
+                                </div>
+                            </div>
+                        `;
+
+                        // Weekly trend chart
+                        if (charts.weekly) charts.weekly.destroy();
+                        const ctx = document.getElementById('weeklyTrendChart').getContext('2d');
+                        const weekly = p.weekly_data || [];
+                        charts.weekly = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: weekly.map(w => w.week),
+                                datasets: [{
+                                    label: 'Revenue',
+                                    data: weekly.map(w => w.revenue),
+                                    backgroundColor: 'rgba(74, 124, 247, 0.6)',
+                                    borderColor: '#4a7cf7',
+                                    borderWidth: 1,
+                                    borderRadius: 4
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    x: { grid: { display: false }, ticks: { color: '#888', font: { size: 10 } } },
+                                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#888', callback: v => '₹' + (v/1000).toFixed(0) + 'k' } }
+                                }
+                            }
+                        });
+                    } else {
+                        predContent.innerHTML = '<div class="loading-overlay">Need at least 2 weeks of data for predictions</div>';
+                    }
+
+                    // Brand trends table
+                    const trendsBody = document.getElementById('brandTrendsBody');
+                    if (data.brand_trends && data.brand_trends.length > 0) {
+                        trendsBody.innerHTML = data.brand_trends.map(t => `
+                            <tr>
+                                <td><strong>${t.brand}</strong></td>
+                                <td class="text-right font-mono">₹${formatNumber(t.avg_revenue)}</td>
+                                <td class="text-right font-mono" style="color:${t.direction === 'up' ? 'var(--success)' : 'var(--danger)'}">
+                                    ${t.trend_pct > 0 ? '+' : ''}${t.trend_pct}%
+                                </td>
+                                <td class="text-right"><span class="badge ${t.direction === 'up' ? 'badge-up' : 'badge-down'}">${t.direction === 'up' ? '📈 Growing' : '📉 Declining'}</span></td>
+                                <td>${t.data_points} days</td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        trendsBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">No trend data available yet</td></tr>';
+                    }
+                });
+        }
+
+        // ─── PREDICTIONS TAB ─────────────────────────────────────────────
+        function loadAccuracy() {
+            fetch('/api/predictions/accuracy')
+                .then(r => r.json())
+                .then(data => {
+                    const content = document.getElementById('accuracyContent');
+                    if (data.latest) {
+                        const latest = data.latest;
+                        content.innerHTML = `
+                            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;">
+                                <div class="glass-card" style="background:linear-gradient(135deg,rgba(74,124,247,0.08),rgba(167,139,250,0.08));border-color:rgba(74,124,247,0.2);">
+                                    <div class="card-title">Last Prediction</div>
+                                    <div class="card-value" style="font-size:22px;">₹${formatNumber(latest.predicted)}</div>
+                                    <div style="font-size:11px;color:var(--text-muted);">${latest.date || 'N/A'}</div>
+                                </div>
+                                <div class="glass-card" style="background:linear-gradient(135deg,rgba(52,211,153,0.08),rgba(52,211,153,0.08));border-color:rgba(52,211,153,0.2);">
+                                    <div class="card-title">Actual</div>
+                                    <div class="card-value" style="font-size:22px;color:var(--success);">₹${formatNumber(latest.actual)}</div>
+                                    <div style="font-size:11px;color:var(--text-muted);">Verified</div>
+                                </div>
+                                <div class="glass-card" style="background:linear-gradient(135deg,rgba(251,191,36,0.08),rgba(251,191,36,0.08));border-color:rgba(251,191,36,0.2);">
+                                    <div class="card-title">Error</div>
+                                    <div class="card-value" style="font-size:22px;color:var(--warning);">${latest.error}%</div>
+                                    <div style="font-size:11px;color:var(--text-muted);">Deviation</div>
+                                </div>
+                                <div class="glass-card" style="background:linear-gradient(135deg,rgba(74,124,247,0.08),rgba(167,139,250,0.08));border-color:rgba(74,124,247,0.2);">
+                                    <div class="card-title">Accuracy</div>
+                                    <div class="card-value" style="font-size:22px;color:var(--primary);">${latest.accuracy}%</div>
+                                    <div style="font-size:11px;color:var(--text-muted);">${data.summary.accurate_count}/${data.summary.total_predictions} accurate</div>
+                                </div>
+                            </div>
+                            ${data.history && data.history.length > 0 ? `
+                                <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+                                    <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Recent Accuracy (Last ${data.history.length} predictions)</div>
+                                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                        ${data.history.map(h => `
+                                            <div style="flex:1;min-width:120px;padding:8px;background:var(--glass);border-radius:8px;border:1px solid var(--glass-border);">
+                                                <div style="font-size:10px;color:var(--text-muted);">${h.date}</div>
+                                                <div style="font-size:14px;font-weight:600;color:${h.accuracy >= 90 ? 'var(--success)' : h.accuracy >= 70 ? 'var(--warning)' : 'var(--danger)'};">${h.accuracy}%</div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                        `;
+                    } else {
+                        content.innerHTML = '<div class="loading-overlay">No predictions tracked yet. Make predictions to see accuracy.</div>';
+                    }
+                })
+                .catch(err => {
+                    console.error('Accuracy error:', err);
+                    document.getElementById('accuracyContent').innerHTML = '<div class="loading-overlay">Error loading accuracy data</div>';
+                });
+        }
+
+        function loadBreakoutPredictions() {
+            fetch('/api/predictions/breakout')
+                .then(r => r.json())
+                .then(data => {
+                    const content = document.getElementById('breakoutContent');
+                    if (data.breakouts && data.breakouts.length > 0) {
+                        content.innerHTML = `
+                            <div style="margin-bottom:12px;font-size:12px;color:var(--text-muted);">
+                                Found ${data.total_candidates} breakout candidates · Showing top ${data.breakouts.length}
+                            </div>
+                            <div class="table-container">
+                                <table>
+                                    <thead><tr>
+                                        <th>Product</th>
+                                        <th>Brand</th>
+                                        <th class="text-right">Current Rank</th>
+                                        <th class="text-right">Predicted Rank</th>
+                                        <th class="text-right">Change</th>
+                                        <th>Classification</th>
+                                        <th>Reason</th>
+                                        <th class="text-right">Confidence</th>
+                                    </tr></thead>
+                                    <tbody>
+                                        ${data.breakouts.map(b => `
+                                            <tr>
+                                                <td><strong>${b.product_name.substring(0, 40)}</strong></td>
+                                                <td>${b.brand}</td>
+                                                <td class="text-right font-mono">#${b.current_rank}</td>
+                                                <td class="text-right font-mono" style="color:var(--primary);font-weight:600;">#${b.predicted_rank}</td>
+                                                <td class="text-right font-mono" style="color:var(--success);">↑ +${b.rank_change}</td>
+                                                <td><span class="badge" style="background:${b.classification === 'BREAKOUT' ? 'rgba(248,113,113,0.15)' : b.classification === 'RISING' ? 'rgba(52,211,153,0.15)' : 'rgba(251,191,36,0.15)'};color:${b.classification === 'BREAKOUT' ? 'var(--danger)' : b.classification === 'RISING' ? 'var(--success)' : 'var(--warning)'};">${b.emoji} ${b.classification}</span></td>
+                                                <td style="font-size:12px;color:var(--text-muted);">${b.reason}</td>
+                                                <td class="text-right font-mono" style="font-weight:600;color:${b.confidence >= 80 ? 'var(--success)' : b.confidence >= 60 ? 'var(--warning)' : 'var(--text-muted)'};">${b.confidence}%</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
+                    } else {
+                        content.innerHTML = '<div class="loading-overlay">No breakout predictions available yet. Need more sales data.</div>';
+                    }
+                })
+                .catch(err => {
+                    console.error('Breakout error:', err);
+                    document.getElementById('breakoutContent').innerHTML = '<div class="loading-overlay">Error loading breakout predictions</div>';
+                });
+        }
+
+        // ─── BRAND GROWTH TAB ────────────────────────────────────────────
+        let growthChart = null;
+
+        function loadBrandGrowth() {
+            const weeks = document.getElementById('growthWeeks').value;
+            
+            fetch(`/api/brand-growth?weeks=${weeks}`)
+                .then(r => r.json())
+                .then(data => {
+                    updateGrowthSummary(data);
+                    updateTopGrowing(data.brands);
+                    updateTopDeclining(data.brands);
+                    updateGrowthTrendChart(data.brands);
+                    updateAllBrandsGrowthTable(data.brands);
+                })
+                .catch(err => {
+                    console.error('Brand growth error:', err);
+                });
+        }
+
+        function updateGrowthSummary(data) {
+            const brands = data.brands;
+            document.getElementById('growthTotalBrands').textContent = brands.length;
+            
+            const growing = brands.filter(b => b.latest_growth > 0).length;
+            const declining = brands.filter(b => b.latest_growth < 0).length;
+            document.getElementById('growthGrowingCount').textContent = growing;
+            document.getElementById('growthDecliningCount').textContent = declining;
+            
+            const avgGrowth = brands.length > 0 ? brands.reduce((sum, b) => sum + b.latest_growth, 0) / brands.length : 0;
+            const avgGrowthEl = document.getElementById('growthAvgRate');
+            avgGrowthEl.textContent = (avgGrowth > 0 ? '+' : '') + avgGrowth.toFixed(1) + '%';
+            avgGrowthEl.style.color = avgGrowth >= 0 ? 'var(--success)' : 'var(--danger)';
+        }
+
+        function updateTopGrowing(brands) {
+            const growing = brands.filter(b => b.latest_growth > 0).slice(0, 10);
+            const tbody = document.getElementById('topGrowingBody');
+            
+            if (growing.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">No growing brands</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = growing.map((b, i) => `
+                <tr>
+                    <td>${i + 1}</td>
+                    <td><strong>${b.brand}</strong></td>
+                    <td class="text-right font-mono" style="color:var(--success);">+${b.latest_growth}%</td>
+                    <td class="text-right font-mono">₹${formatNumber(b.latest_revenue)}</td>
+                    <td class="text-right font-mono">${b.streak_direction === 'growing' ? '🔥' : ''}${b.streak}w</td>
+                </tr>
+            `).join('');
+        }
+
+        function updateTopDeclining(brands) {
+            const declining = brands.filter(b => b.latest_growth < 0).slice(0, 10);
+            const tbody = document.getElementById('topDecliningBody');
+            
+            if (declining.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">No declining brands</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = declining.map((b, i) => `
+                <tr>
+                    <td>${i + 1}</td>
+                    <td><strong>${b.brand}</strong></td>
+                    <td class="text-right font-mono" style="color:var(--danger);">${b.latest_growth}%</td>
+                    <td class="text-right font-mono">₹${formatNumber(b.latest_revenue)}</td>
+                    <td class="text-right font-mono">${b.streak_direction === 'declining' ? '⚠️' : ''}${b.streak}w</td>
+                </tr>
+            `).join('');
+        }
+
+        function updateGrowthTrendChart(brands) {
+            if (growthChart) growthChart.destroy();
+            
+            const ctx = document.getElementById('growthTrendChart').getContext('2d');
+            const top5 = brands.slice(0, 5);
+            
+            if (top5.length === 0) {
+                growthChart = new Chart(ctx, {
+                    type: 'line',
+                    data: { labels: [], datasets: [] },
+                    options: { plugins: { title: { display: true, text: 'No data available', color: '#888' } } }
+                });
+                return;
+            }
+            
+            // Get all weeks from first brand
+            const weeks = top5[0].weekly_data.map(w => w.date.slice(5));
+            
+            const colors = ['#4a7cf7', '#34d399', '#fbbf24', '#f87171', '#a78bfa'];
+            
+            const datasets = top5.map((brand, idx) => {
+                // Calculate growth rates for each week
+                const growthData = [];
+                for (let i = 1; i < brand.weekly_data.length; i++) {
+                    const prev = brand.weekly_data[i-1].revenue;
+                    const curr = brand.weekly_data[i].revenue;
+                    const growth = prev > 0 ? ((curr - prev) / prev) * 100 : 0;
+                    growthData.push(growth);
+                }
+                
+                return {
+                    label: brand.brand,
+                    data: growthData,
+                    borderColor: colors[idx],
+                    backgroundColor: colors[idx] + '20',
+                    fill: false,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    borderWidth: 2
+                };
+            });
+            
+            growthChart = new Chart(ctx, {
+                type: 'line',
+                data: { labels: weeks.slice(1), datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { position: 'top', labels: { color: '#888', padding: 12, font: { size: 11 } } }
+                    },
+                    scales: {
+                        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#888', font: { size: 10 } } },
+                        y: { 
+                            grid: { color: 'rgba(255,255,255,0.05)' }, 
+                            ticks: { 
+                                color: '#888', 
+                                callback: v => v.toFixed(0) + '%'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateAllBrandsGrowthTable(brands) {
+            const tbody = document.getElementById('allBrandsGrowthBody');
+            tbody.innerHTML = brands.map(b => {
+                const growthColor = b.latest_growth > 0 ? 'var(--success)' : b.latest_growth < 0 ? 'var(--danger)' : 'var(--text-muted)';
+                const momentumColor = b.momentum > 0 ? 'var(--success)' : b.momentum < 0 ? 'var(--danger)' : 'var(--text-muted)';
+                const consistencyColor = b.consistency >= 70 ? 'var(--success)' : b.consistency >= 40 ? 'var(--warning)' : 'var(--danger)';
+                
+                return `
+                    <tr>
+                        <td><strong>${b.brand}</strong></td>
+                        <td class="text-right font-mono" style="color:${growthColor};font-weight:600;">
+                            ${b.latest_growth > 0 ? '+' : ''}${b.latest_growth}%
+                        </td>
+                        <td class="text-right font-mono">${b.ma_4_weeks > 0 ? '+' : ''}${b.ma_4_weeks}%</td>
+                        <td class="text-right font-mono" style="color:${momentumColor};">
+                            ${b.momentum > 0 ? '↑' : b.momentum < 0 ? '↓' : '→'} ${b.momentum > 0 ? '+' : ''}${b.momentum}%
+                        </td>
+                        <td class="text-right font-mono" style="color:${consistencyColor};">
+                            ${b.consistency}%
+                        </td>
+                        <td class="text-right font-mono">₹${formatNumber(b.latest_revenue)}</td>
+                        <td>
+                            <span class="badge ${b.streak_direction === 'growing' ? 'badge-growing' : b.streak_direction === 'declining' ? 'badge-declining' : 'badge-stable'}">
+                                ${b.streak_direction === 'growing' ? '🚀' : b.streak_direction === 'declining' ? '⚠️' : '➡️'} ${b.streak}w
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function sortGrowthTable(sortBy) {
+            // Simple reload - in production, you'd pass sort parameter to API
+            loadBrandGrowth();
+        }
+
+        // ─── REORDER TAB ────────────────────────────────────────────────
+        function loadReorderSuggestions() {
+            fetch('/api/reorder/suggestions')
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('reorderBrands').textContent = data.total_brands;
+                    document.getElementById('reorderItems').textContent = data.total_items;
+                    document.getElementById('reorderTotalQty').textContent = data.total_reorder_qty;
+                    
+                    const container = document.getElementById('reorderBrandCards');
+                    container.innerHTML = data.brands.map(b => `
+                        <div class="glass-card" style="margin-bottom:16px;">
+                            <div class="section-header">
+                                <div>
+                                    <div class="card-title" style="font-size:16px;text-transform:none;color:var(--text);">
+                                        🏷️ ${b.brand}
+                                    </div>
+                                    <div style="font-size:12px;color:var(--text-muted);">
+                                        ${b.items.length} products · ${b.total_qty} units to reorder
+                                    </div>
+                                </div>
+                                <button class="btn btn-primary btn-sm" onclick="exportBrandPO('${b.brand}')">
+                                    📥 Export PO
+                                </button>
+                            </div>
+                            <div class="table-container">
+                                <table>
+                                    <thead><tr>
+                                        <th>Barcode</th>
+                                        <th>Product</th>
+                                        <th class="text-right">Avg/Week</th>
+                                        <th class="text-right">Trend</th>
+                                        <th>Priority</th>
+                                        <th class="text-right">Reorder Qty</th>
+                                        <th class="text-right">MRP</th>
+                                        <th class="text-right">Margin%</th>
+                                    </tr></thead>
+                                    <tbody>
+                                        ${b.items.map(item => {
+                                            const trendColor = item.trend_direction === 'up' ? 'var(--success)' : 'var(--danger)';
+                                            const priorityColor = item.priority === 'High' ? 'var(--success)' : item.priority === 'Low' ? 'var(--danger)' : 'var(--warning)';
+                                            return `
+                                                <tr>
+                                                    <td class="font-mono" style="font-size:11px;">${item.barcode}</td>
+                                                    <td>${item.product_name ? item.product_name.substring(0, 50) : '—'}</td>
+                                                    <td class="text-right font-mono">${item.avg_weekly_sales}</td>
+                                                    <td class="text-right font-mono" style="color:${trendColor}">
+                                                        ${item.trend_pct > 0 ? '↑' : '↓'} ${Math.abs(item.trend_pct)}%
+                                                    </td>
+                                                    <td><span class="badge" style="background:${priorityColor}20;color:${priorityColor}">${item.priority}</span></td>
+                                                    <td class="text-right font-mono" style="font-weight:600;color:var(--primary);">${item.reorder_qty}</td>
+                                                    <td class="text-right font-mono">₹${formatNumber(item.mrp)}</td>
+                                                    <td class="text-right font-mono">${item.margin}%</td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `).join('');
+                })
+                .catch(err => {
+                    console.error('Reorder error:', err);
+                    document.getElementById('reorderBrandCards').innerHTML = 
+                        '<div class="glass-card"><div class="loading-overlay">No data available. Upload POS bills first.</div></div>';
+                });
+        }
+
+        function exportBrandPO(brand) {
+            fetch('/api/reorder/export', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ brand: brand })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    // Trigger download
+                    const a = document.createElement('a');
+                    a.href = `/api/reorder/${data.file}`;
+                    a.download = data.file;
+                    a.click();
+                } else {
+                    showToast(data.error || 'Export failed', 'error');
+                }
+            })
+            .catch(err => showToast('Export error: ' + err.message, 'error'));
+        }
+
+        function exportAllPO() {
+            fetch('/api/reorder/export', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    data.files.forEach(f => {
+                        const a = document.createElement('a');
+                        a.href = `/api/reorder/${f.file}`;
+                        a.download = f.file;
+                        a.click();
+                    });
+                } else {
+                    showToast(data.error || 'Export failed', 'error');
+                }
+            })
+            .catch(err => showToast('Export error: ' + err.message, 'error'));
+        }
+
+        // ─── TRENDS TAB ────────────────────────────────────────────────
+        let trendsChart = null;
+
+        function loadTrends() {
+            const level = document.getElementById('trendsLevel').value;
+            const parent = document.getElementById('trendsParent').value;
+            const startDate = document.getElementById('trendsStart').value;
+            const endDate = document.getElementById('trendsEnd').value;
+            
+            // Show/hide parent filter
+            const parentSelect = document.getElementById('trendsParent');
+            if (level === 'category') {
+                parentSelect.style.display = 'none';
+            } else {
+                parentSelect.style.display = 'inline-block';
+            }
+            
+            let url = `/api/trends?level=${level}`;
+            if (startDate && endDate) {
+                url += `&start_date=${startDate}&end_date=${endDate}`;
+            }
+            if (parent && level !== 'category') {
+                url += `&parent=${encodeURIComponent(parent)}`;
+            }
+            
+            fetch(url)
+                .then(r => r.json())
+                .then(data => {
+                    // Update summary
+                    document.getElementById('trendsItems').textContent = data.total_items;
+                    document.getElementById('trendsRevenue').textContent = '₹' + formatNumber(data.total_revenue);
+                    document.getElementById('trendsUnits').textContent = data.total_units;
+                    
+                    const growing = data.items.filter(i => i.status === 'growing').length;
+                    const declining = data.items.filter(i => i.status === 'declining').length;
+                    document.getElementById('trendsGrowing').textContent = growing;
+                    document.getElementById('trendsDeclining').textContent = declining;
+                    
+                    // Update table
+                    const tbody = document.getElementById('trendsTableBody');
+                    tbody.innerHTML = data.items.map((item, i) => {
+                        const growthColor = item.growth > 0 ? 'var(--success)' : item.growth < 0 ? 'var(--danger)' : 'var(--text-muted)';
+                        const trendColor = item.trend_pct > 0 ? 'var(--success)' : 'var(--danger)';
+                        const drillBtn = data.level !== 'product' ? 
+                            `<button class="btn btn-outline btn-sm" onclick="drillTrends('${item.name}')">→</button>` : '';
+                        return `
+                            <tr>
+                                <td>${i + 1}</td>
+                                <td><strong>${item.name}</strong></td>
+                                <td class="text-right font-mono">₹${formatNumber(item.revenue)}</td>
+                                <td class="text-right font-mono">${item.units}</td>
+                                <td class="text-right font-mono">${item.bills}</td>
+                                <td class="text-right font-mono" style="color:${growthColor}">
+                                    ${item.growth > 0 ? '+' : ''}${item.growth}%
+                                </td>
+                                <td class="text-right font-mono" style="color:${trendColor}">
+                                    ${item.trend_pct > 0 ? '↑' : '↓'} ${Math.abs(item.trend_pct)}%
+                                </td>
+                                <td><span class="badge badge-${item.status}">${item.status}</span></td>
+                                <td>${drillBtn}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                    
+                    // Update parent filter options
+                    if (level === 'subcategory' && data.subcategories && Object.keys(data.subcategories).length > 0) {
+                        const parentSelect = document.getElementById('trendsParent');
+                        // Keep existing value or show all categories
+                        const allCats = Object.keys(data.subcategories);
+                        parentSelect.innerHTML = '<option value="">All Categories</option>' + 
+                            allCats.map(c => `<option value="${c}" ${parent === c ? 'selected' : ''}>${c}</option>`).join('');
+                        parentSelect.style.display = 'inline-block';
+                    }
+                    
+                    // Update chart
+                    updateTrendsChart(data.items);
+                })
+                .catch(err => {
+                    console.error('Trends error:', err);
+                });
+        }
+
+        function drillTrends(name) {
+            const level = document.getElementById('trendsLevel').value;
+            if (level === 'category') {
+                // Drill to subcategory
+                document.getElementById('trendsLevel').value = 'subcategory';
+                document.getElementById('trendsParent').value = name;
+            } else if (level === 'subcategory') {
+                document.getElementById('trendsLevel').value = 'product';
+                document.getElementById('trendsParent').value = name;
+            }
+            loadTrends();
+        }
+
+        function updateTrendsChart(items) {
+            if (trendsChart) trendsChart.destroy();
+            
+            const ctx = document.getElementById('trendsChart').getContext('2d');
+            const top10 = items.slice(0, 10);
+            
+            if (top10.length === 0) {
+                trendsChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: { labels: [], datasets: [] },
+                    options: { plugins: { title: { display: true, text: 'No data', color: '#888' } } }
+                });
+                return;
+            }
+            
+            const colors = top10.map(i => i.growth > 0 ? '#34d399' : '#f87171');
+            
+            trendsChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: top10.map(i => i.name.length > 20 ? i.name.substring(0, 20) + '...' : i.name),
+                    datasets: [{
+                        label: 'Revenue',
+                        data: top10.map(i => i.revenue),
+                        backgroundColor: colors.map(c => c + '99'),
+                        borderColor: colors,
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { 
+                            grid: { color: 'rgba(255,255,255,0.05)' }, 
+                            ticks: { color: '#888', callback: v => '₹' + (v/1000).toFixed(0) + 'k' }
+                        },
+                        y: { 
+                            grid: { display: false }, 
+                            ticks: { color: '#888', font: { size: 10 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ─── DATA TAB ────────────────────────────────────────────────────
+        function loadDataStatus() {
+            fetch('/api/data/status')
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('dataBrands').textContent = data.brands;
+                    document.getElementById('dataProducts').textContent = data.products;
+                    document.getElementById('dataBills').textContent = data.bills;
+                    document.getElementById('dataItems').textContent = data.items;
+                    document.getElementById('dataUploads').textContent = data.uploads;
+                    document.getElementById('dataDateRange').textContent = 
+                        data.date_range.first ? `${data.date_range.first} → ${data.date_range.last}` : '—';
+                });
+
+            fetch('/api/uploads')
+                .then(r => r.json())
+                .then(data => {
+                    const tbody = document.getElementById('uploadHistoryBody');
+                    tbody.innerHTML = data.uploads.map(u => `
+                        <tr>
+                            <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;">${u.file_name}</td>
+                            <td><span class="badge" style="background:${u.file_type === 'pos' ? 'rgba(74,124,247,0.15)' : 'rgba(52,211,153,0.15)'};color:${u.file_type === 'pos' ? 'var(--primary)' : 'var(--success)'}">${u.file_type}</span></td>
+                            <td class="font-mono">${u.processed_rows}</td>
+                            <td><span class="badge" style="background:rgba(52,211,153,0.15);color:var(--success)">${u.status}</span></td>
+                            <td style="font-size:11px;color:var(--text-muted);">${u.uploaded_at ? u.uploaded_at.slice(0, 19) : '—'}</td>
+                        </tr>
+                    `).join('');
+                });
+        }
+
+        function resetData() {
+            if (!confirm('Are you sure you want to delete ALL data?')) return;
+            
+            fetch('/api/reset', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('All data cleared successfully', 'info');
+                        refreshDashboard();
+                        loadDataStatus();
+                    }
+                });
+        }
+
+        // ─── UTILITIES ───────────────────────────────────────────────────
+        function formatNumber(n) {
+            n = parseFloat(n) || 0;
+            if (n >= 10000000) return (n / 10000000).toFixed(2) + 'Cr';
+            if (n >= 100000) return (n / 100000).toFixed(2) + 'L';
+            if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+            return n.toLocaleString('en-IN');
+        }
+
+        // ─── AI MERCHANDISING ────────────────────────────────────────────
+        function loadAIMerchandising(force = false) {
+            const content = document.getElementById('aiMerchandisingContent');
+            content.innerHTML = '<div class="loading-overlay"><div class="loading-spinner"></div> Analyzing inventory and upcoming trends...</div>';
+            
+            fetch(`/api/ai_merchandising?force=${force}`)
+                .then(r => r.json())
+                .then(res => {
+                    if (!res.success) {
+                        content.innerHTML = `<div style="color:var(--danger);padding:20px;">Error: ${res.error}</div>`;
+                        return;
+                    }
+                    
+                    const data = res.data;
+                    let html = '';
+                    
+                    if (res.cached) {
+                        html += `<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">✅ Loaded from this month's cache.</div>`;
+                    }
+                    
+                    // Seasonal Forecast
+                    html += `<div class="card-title" style="margin-top:20px; font-size:16px;">🗓️ Seasonal & Event Forecast</div>`;
+                    html += `<div class="kpi-grid">`;
+                    data.seasonal_forecast.forEach(item => {
+                        html += `
+                        <div class="glass-card">
+                            <div style="font-weight:600; font-size:15px; margin-bottom:8px; color:var(--primary);">${item.title}</div>
+                            <div style="font-size:13px; color:var(--text-muted); margin-bottom:12px;">${item.reason}</div>
+                            <div style="font-size:12px;">
+                                <strong>Suggested Items:</strong>
+                                <ul style="margin-left:16px; margin-top:4px; color:var(--text);">
+                                    ${item.items.map(i => `<li>${i}</li>`).join('')}
+                                </ul>
+                            </div>
+                        </div>`;
+                    });
+                    html += `</div>`;
+                    
+                    // Stylist Picks
+                    html += `<div class="card-title" style="margin-top:32px; font-size:16px;">🧠 AI Stylist Picks (Combinations)</div>`;
+                    html += `<div class="kpi-grid">`;
+                    data.stylist_picks.forEach(item => {
+                        html += `
+                        <div class="glass-card" style="border-color:rgba(167,139,250,0.3);">
+                            <div style="font-weight:600; font-size:15px; margin-bottom:8px; color:#a78bfa;">${item.title}</div>
+                            <div style="font-size:13px; color:var(--text-muted); margin-bottom:12px;">${item.reason}</div>
+                            <div style="font-size:12px;">
+                                <strong>Combination:</strong>
+                                <ul style="margin-left:16px; margin-top:4px; color:var(--text);">
+                                    ${item.items.map(i => `<li>${i}</li>`).join('')}
+                                </ul>
+                            </div>
+                        </div>`;
+                    });
+                    html += `</div>`;
+                    
+                    content.innerHTML = html;
+                })
+                .catch(err => {
+                    content.innerHTML = `<div style="color:var(--danger);padding:20px;">Error generating insights: ${err.message}</div>`;
+                });
+        }
+
+        // ─── BUYING PLAN ─────────────────────────────────────────────────
+        let bpCurrentPage = 1;
+        let bpTotalPages = 1;
+
+        function loadBuyingPlan(force = false) {
+            // Load summary
+            const url = force ? '/api/buying-plan/load?force=true' : '/api/buying-plan/load';
+            fetch(url)
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('bpTotalProducts').textContent = data.total_inventory || 0;
+                    document.getElementById('bpTotalBrands').textContent = (data.brands || []).length;
+                    
+                    // Populate brand filter
+                    const brandSelect = document.getElementById('bpBrandFilter');
+                    const currentBrand = brandSelect.value;
+                    brandSelect.innerHTML = '<option value="">All Brands</option>' + 
+                        (data.brands || []).map(b => `<option value="${b}" ${b === currentBrand ? 'selected' : ''}>${b}</option>`).join('');
+                    
+                    // Populate category filter
+                    const catSelect = document.getElementById('bpCategoryFilter');
+                    const currentCat = catSelect.value;
+                    catSelect.innerHTML = '<option value="">All Categories</option>' + 
+                        (data.categories || []).map(c => `<option value="${c}" ${c === currentCat ? 'selected' : ''}>${c}</option>`).join('');
+                    
+                    // Load AI suggestions and products
+                    loadBuyingPlanSuggestions();
+                    loadBuyingPlanProducts();
+                    loadBuyingPlanSelected();
+                })
+                .catch(err => {
+                    console.error('Buying plan load error:', err);
+                    document.getElementById('bpAIContent').innerHTML = 
+                        '<div style="color:var(--danger);padding:20px;">Error loading buying plan. Check if Toscee_buying_plan.xlsx exists.</div>';
+                });
+        }
+
+        function loadBuyingPlanSuggestions() {
+            const container = document.getElementById('bpAIContent');
+            container.innerHTML = '<div class="loading-overlay"><div class="loading-spinner"></div> Analyzing POS data against buying plan...</div>';
+            
+            fetch('/api/buying-plan/ai-suggestions?limit=20')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) {
+                        container.innerHTML = `<div style="color:var(--danger);padding:20px;">Error: ${data.error}</div>`;
+                        return;
+                    }
+                    
+                    const suggestions = data.suggestions || [];
+                    document.getElementById('bpAISuggestions').textContent = suggestions.length;
+                    
+                    if (suggestions.length === 0) {
+                        container.innerHTML = `<div style="color:var(--text-muted);padding:20px;">
+                            No AI suggestions available. Upload POS bills and inventory data first to get personalized recommendations.<br><br>
+                            <small>AI suggests items from your buying plan that belong to your top-selling brands but aren't in your current inventory yet.</small>
+                        </div>`;
+                        return;
+                    }
+                    
+                    let html = `<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">
+                        Showing ${suggestions.length} personalized suggestions based on your POS sales data.</div>`;
+                    html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;">';
+                    
+                    suggestions.forEach((product, idx) => {
+                        const imgUrl = product.display_image || product.image_url || product.local_image || '';
+                        const title = product.product_title || 'Product';
+                        const brand = product.brand || '';
+                        const mrp = product.mrp ? '₹' + formatNumber(product.mrp) : 'MRP: N/A';
+                        const reasons = (product.suggestion_reasons || []).join('<br>');
+                        const color = product.color || '';
+                        const size = product.size || '';
+                        const barcode = product.barcode || '';
+                        
+                        html += `
+                            <div class="glass-card" style="padding:12px;display:flex;flex-direction:column;">
+                                <div style="height:180px;background:#1a1a2e;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:10px;">
+                                    ${imgUrl ? `<img src="${imgUrl}" style="max-width:100%;max-height:100%;object-fit:contain;" onerror="this.style.display='none';this.parentElement.innerHTML='<div style=\\'color:#555;font-size:12px;\\'>📷 No Image</div>';">` 
+                                              : `<div style="color:#555;font-size:12px;">📷 No Image</div>`}
+                                </div>
+                                <div style="flex:1;">
+                                    <div style="font-weight:600;font-size:13px;margin-bottom:4px;">${title.substring(0, 50)}</div>
+                                    <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">🏷️ ${brand}</div>
+                                    <div style="font-size:13px;font-weight:600;color:var(--primary);margin-bottom:4px;">${mrp}</div>
+                                    ${color ? `<div style="font-size:11px;color:var(--text-muted);">Color: ${color} ${size ? '· Size: ' + size : ''}</div>` : ''}
+                                    <div style="font-size:11px;color:var(--success);margin-top:6px;padding:4px 8px;background:rgba(52,211,153,0.1);border-radius:6px;">
+                                        ${reasons}
+                                    </div>
+                                </div>
+                                <div style="margin-top:10px;display:flex;gap:8px;">
+                                    <button class="btn btn-primary btn-sm" style="flex:1;font-size:11px;padding:4px 8px;" 
+                                            onclick="addBuyingPlanItem('${barcode}', '${brand}', '${title.replace(/'/g, "\\'")}', ${mrp})">
+                                        ➕ Add
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    html += '</div>';
+                    container.innerHTML = html;
+                })
+                .catch(err => {
+                    console.error('AI suggestions error:', err);
+                    container.innerHTML = `<div style="color:var(--danger);padding:20px;">Error: ${err.message}</div>`;
+                });
+        }
+
+        function loadBuyingPlanProducts(page = 1) {
+            bpCurrentPage = page;
+            const brand = document.getElementById('bpBrandFilter').value;
+            const category = document.getElementById('bpCategoryFilter').value;
+            const search = document.getElementById('bpSearch').value;
+            
+            const container = document.getElementById('bpProductsContainer');
+            container.innerHTML = '<div class="loading-overlay"><div class="loading-spinner"></div> Loading products...</div>';
+            
+            let url = `/api/buying-plan/products?page=${page}&per_page=20`;
+            if (brand) url += `&brand=${encodeURIComponent(brand)}`;
+            if (category) url += `&category=${encodeURIComponent(category)}`;
+            if (search) url += `&search=${encodeURIComponent(search)}`;
+            
+            fetch(url)
+                .then(r => r.json())
+                .then(data => {
+                    const products = data.products || [];
+                    bpTotalPages = data.total_pages || 1;
+                    
+                    if (products.length === 0) {
+                        container.innerHTML = '<div style="color:var(--text-muted);padding:40px;text-align:center;">No products found.</div>';
+                        updateBPPagination();
+                        return;
+                    }
+                    
+                    let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;">';
+                    
+                    products.forEach(product => {
+                        const imgUrl = product.local_image || product.image_url || '';
+                        const title = product.product_title || 'Product';
+                        const brand = product.brand || '';
+                        const mrp = product.mrp ? '₹' + formatNumber(product.mrp) : '';
+                        const color = product.color || '';
+                        const size = product.size || '';
+                        const barcode = product.barcode || '';
+                        const styleCode = product.style_code || '';
+                        
+                        html += `
+                            <div class="glass-card" style="padding:10px;">
+                                <div style="height:160px;background:#1a1a2e;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:8px;">
+                                    ${imgUrl ? `<img src="${imgUrl}" style="max-width:100%;max-height:100%;object-fit:contain;" onerror="this.style.display='none';this.parentElement.innerHTML='<div style=\\'color:#555;font-size:11px;\\'>📷 No Image</div>';">` 
+                                              : `<div style="color:#555;font-size:11px;">📷 No Image</div>`}
+                                </div>
+                                <div style="font-weight:500;font-size:12px;margin-bottom:2px;" title="${title}">${title.substring(0, 40)}</div>
+                                <div style="font-size:11px;color:var(--text-muted);">🏷️ ${brand}</div>
+                                ${mrp ? `<div style="font-size:12px;font-weight:600;color:var(--primary);">${mrp}</div>` : ''}
+                                <div style="font-size:10px;color:var(--text-muted);">
+                                    ${color ? '🎨 ' + color : ''} ${size ? '📏 ' + size : ''}
+                                    ${styleCode ? '<br>🔖 ' + styleCode : ''}
+                                </div>
+                                <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px;font-size:11px;padding:4px 8px;" 
+                                        onclick="addBuyingPlanItem('${barcode}', '${brand}', '${title.replace(/'/g, "\\'")}', ${mrp || 0})">
+                                    ➕ Add to Reorder
+                                </button>
+                            </div>
+                        `;
+                    });
+                    
+                    html += '</div>';
+                    container.innerHTML = html;
+                    updateBPPagination();
+                })
+                .catch(err => {
+                    console.error('Products load error:', err);
+                    container.innerHTML = `<div style="color:var(--danger);padding:20px;">Error: ${err.message}</div>`;
+                });
+        }
+
+        function updateBPPagination() {
+            const container = document.getElementById('bpPagination');
+            if (bpTotalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            let html = '';
+            if (bpCurrentPage > 1) {
+                html += `<button class="btn btn-outline btn-sm" onclick="loadBuyingPlanProducts(${bpCurrentPage - 1})">◀ Prev</button>`;
+            }
+            
+            for (let i = Math.max(1, bpCurrentPage - 2); i <= Math.min(bpTotalPages, bpCurrentPage + 2); i++) {
+                const active = i === bpCurrentPage ? 'background:rgba(74,124,247,0.2);color:var(--primary);' : '';
+                html += `<button class="btn btn-outline btn-sm" style="${active}" onclick="loadBuyingPlanProducts(${i})">${i}</button>`;
+            }
+            
+            if (bpCurrentPage < bpTotalPages) {
+                html += `<button class="btn btn-outline btn-sm" onclick="loadBuyingPlanProducts(${bpCurrentPage + 1})">Next ▶</button>`;
+            }
+            
+            container.innerHTML = html;
+        }
+
+        function addBuyingPlanItem(barcode, brand, productName, mrp) {
+            if (!barcode) { showToast('Invalid product', 'error'); return; }
+            
+            const item = {
+                barcode: barcode,
+                brand: brand,
+                product_title: productName,
+                mrp: mrp,
+                quantity: 4
+            };
+            
+            fetch('/api/buying-plan/add-to-reorder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items: [item] })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(`✅ Added to selection (${data.total_selected} selected)`, 'success');
+                    document.getElementById('bpSelectedCount').textContent = data.total_selected;
+                }
+            })
+            .catch(err => showToast('Error: ' + err.message, 'error'));
+        }
+
+        function loadBuyingPlanSelected() {
+            fetch('/api/buying-plan/selected')
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('bpSelectedCount').textContent = data.total || 0;
+                })
+                .catch(() => {});
+        }
+
+        function addSelectedToReorder() {
+            fetch('/api/buying-plan/selected')
+                .then(r => r.json())
+                .then(data => {
+                    const items = data.items || [];
+                    if (items.length === 0) {
+                        showToast('No items selected. Browse and click "Add" on products first.', 'info');
+                        return;
+                    }
+                    
+                    // Show success and clear selection
+                    showToast(`✅ ${items.length} items added to reorder. Go to the Reorder tab to see them!`, 'success');
+                    
+                    // Clear the selection after adding
+                    fetch('/api/buying-plan/clear-selected', { method: 'POST' })
+                        .then(r => r.json())
+                        .then(() => {
+                            document.getElementById('bpSelectedCount').textContent = '0';
+                        });
+                })
+                .catch(err => showToast('Error: ' + err.message, 'error'));
+        }
+
+        function clearBuyingPlanSelected() {
+            if (!confirm('Clear all selected items?')) return;
+            fetch('/api/buying-plan/clear-selected', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('Selection cleared', 'info');
+                        document.getElementById('bpSelectedCount').textContent = '0';
+                    }
+                });
+        }
+
+        // ─── DRAG & DROP ─────────────────────────────────────────────────
+        const uploadSection = document.getElementById('uploadSection');
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('dragover');
+        });
+        uploadSection.addEventListener('dragleave', () => {
+            uploadSection.classList.remove('dragover');
+        });
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                const isInventory = file.name.toLowerCase().includes('inventory');
+                const input = isInventory ? document.getElementById('invFileInput') : document.getElementById('posFileInput');
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                input.files = dt.files;
+                uploadFile(isInventory ? 'inventory' : 'pos', input);
+            }
+        });
+
+        // ─── INIT ────────────────────────────────────────────────────────
+        // Set default week based on actual data or use Mon-Sun of current week
+        fetch('/api/dates')
+            .then(r => r.json())
+            .then(data => {
+                if (data.default_week_start && data.default_week_end) {
+                    document.getElementById('weekStart').value = data.default_week_start;
+                    document.getElementById('weekEnd').value = data.default_week_end;
+                    document.getElementById('trendsStart').value = data.default_week_start;
+                    document.getElementById('trendsEnd').value = data.default_week_end;
+                } else {
+                    // Default to current week (Mon-Sun)
+                    const today = new Date();
+                    const dayOfWeek = today.getDay();
+                    const monday = new Date(today);
+                    monday.setDate(today.getDate() - ((dayOfWeek + 6) % 7));
+                    const sunday = new Date(monday);
+                    sunday.setDate(monday.getDate() + 6);
+                    document.getElementById('weekStart').value = monday.toISOString().slice(0, 10);
+                    document.getElementById('weekEnd').value = sunday.toISOString().slice(0, 10);
+                }
+                refreshDashboard();
+            })
+            .catch(() => {
+                // Fallback to current week
+                const today = new Date();
+                const dayOfWeek = today.getDay();
+                const monday = new Date(today);
+                monday.setDate(today.getDate() - ((dayOfWeek + 6) % 7));
+                const sunday = new Date(monday);
+                sunday.setDate(monday.getDate() + 6);
+                document.getElementById('weekStart').value = monday.toISOString().slice(0, 10);
+                document.getElementById('weekEnd').value = sunday.toISOString().slice(0, 10);
+                document.getElementById('trendsStart').value = monday.toISOString().slice(0, 10);
+                document.getElementById('trendsEnd').value = sunday.toISOString().slice(0, 10);
+                refreshDashboard();
+            });
+
+        loadDataStatus();
+    </script>
+</body>
+</html>
