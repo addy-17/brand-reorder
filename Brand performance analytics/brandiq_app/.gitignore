@@ -2,5 +2,6 @@ __pycache__/
 instance/
 uploads/
 *.db
-*.xlsx
 *.pdf
+# Allow buying plan files
+!Toscee_buying_plan.xlsx
