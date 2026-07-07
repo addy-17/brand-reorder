@@ -12,16 +12,16 @@ from pathlib import Path
 # Project root = Path(__file__).parent.parent = "Brand performance analytics"
 _PROJECT_ROOT = Path(__file__).parent.parent  # Brand performance analytics
 
-# Buying plan Excel is in the project root
+# Buying plan Excel and loader module are in the project root
 DEFAULT_EXCEL_PATH = _PROJECT_ROOT / "Toscee_buying_plan.xlsx"
 
-# Buying plan app (for loader module and images) is in parent directory
+# Buying plan app (for images) is in parent directory
 _PARENT_DIR = _PROJECT_ROOT.parent  # Desktop/work
 BUYING_PLAN_APP_DIR = _PARENT_DIR / "buying_plan_app"
 PRODUCT_IMAGES_DIR = BUYING_PLAN_APP_DIR / "product_images"
 
-if BUYING_PLAN_APP_DIR.exists():
-    sys.path.insert(0, str(BUYING_PLAN_APP_DIR))
+# Add project root to path so we can import load_buying_plan_excel
+sys.path.insert(0, str(_PROJECT_ROOT))
 
 # Cache for loaded data
 _BUYING_PLAN_CACHE = None
