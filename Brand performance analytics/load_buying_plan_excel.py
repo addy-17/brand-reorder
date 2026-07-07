@@ -40,6 +40,7 @@ def load_buying_plan_excel(filepath):
         df.columns = [str(c).strip() for c in df.columns]
         
         brand_name = sheet_name.strip()
+        print(f"[BP] Sheet '{sheet_name}': {len(df)} rows, columns: {list(df.columns)}")
         
         for _, row in df.iterrows():
             # Skip empty rows
