@@ -36,7 +36,19 @@ def load_buying_plan(filepath=None):
         return _BUYING_PLAN_CACHE
     
     if not filepath.exists():
-        return {"total_inventory": 0, "products": [], "brands": [], "error": f"File not found: {filepath}"}
+        return {"total_inventory": 0, "products": [], "brands": [], "categories": [], 
+                "error": f"Buying plan Excel not found: {filepath}\nPlease place Toscee_buying_plan.xlsx in the project root."}
+    
+    # Check if the Excel loader module exists
+    try:
+        import importlib.util
+        spec = importlib.util.find_spec("load_buying_plan_excel")
+        if spec is None:
+            return {"total_inventory": 0, "products": [], "brands": [], "categories": [],
+                    "error": "Buying plan loader module not found.\nPlease add load_buying_plan_excel.py to the project root."}
+    except Exception as e:
+        return {"total_inventory": 0, "products": [], "brands": [], "categories": [],
+                "error": f"Error checking loader module: {str(e)}"}
     
     try:
         from load_buying_plan_excel import load_buying_plan_excel
